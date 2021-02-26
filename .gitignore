@@ -1,0 +1,16 @@
+# CMake Entries
+build
+compile_commands.json
+KDBTree
+
+# Other
+Experiments
+data
+*._*
+*DS_Store*
+*.dat
+*.idx
+*.csv
+*.png
+*.err
+Index
