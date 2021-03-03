@@ -143,9 +143,13 @@ void KDBTree::insertPoint(SuperNode *pn, SuperNode *node, vector<float> p) {
         if (node->points->size() > leafCap) newNodes = node->splitLeaf();
     }
     if (!newNodes.empty()){
-        if (node == root) pn->childNodes->clear();
+        if (node == root) {
+            root->childNodes->clear();
+            root->height++;
+        }
         else pn->childNodes->erase(find(all(pn->childNodes.value()), node));
         for (auto cn: newNodes) pn->childNodes->emplace_back(cn);
+        splitCount++;
     }
 }
 
