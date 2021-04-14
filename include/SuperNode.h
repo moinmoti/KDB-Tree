@@ -36,7 +36,7 @@ public:
     // Common supernode methods
     void setGuide(Split*, Split*);
     void createRect(vector<float>, Split*, int);
-    int getSize() const;
+    int size() const;
     //void mergeNode(int, SuperNode*);
     //int deleteNode(SuperNode*);
 
@@ -45,7 +45,7 @@ public:
 
     // Leaf specific methods
     virtual vector<SuperNode*> splitBranch(Split* = NULL, vector<SuperNode*> = vector<SuperNode*>());
-    vector<vector<float>> scan(vector<float>) const;
+    int scan(vector<float>) const;
 
     ~SuperNode();
 };

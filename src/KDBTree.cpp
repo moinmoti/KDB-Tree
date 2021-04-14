@@ -103,7 +103,7 @@ void KDBTree::fullSnapshot(vector<float> query) {
 }
 */
 
-void KDBTree::load(string prefix, string filename, long limit) {
+void KDBTree::load(string filename, long limit) {
     string line;
     ifstream file(filename);
 
@@ -170,7 +170,7 @@ void KDBTree::deleteQuery(vector<float> p, map<string, double> &res) {
 }
 
 void rangeSearch(SuperNode *node, int &pointCount, vector<float> query) {
-    if (node->height == 0) pointCount += node->scan(query).size();
+    if (node->height == 0) pointCount += node->scan(query);
     else {
         for (auto cn: node->childNodes.value())
             if (cn->overlap(query)) rangeSearch(cn, pointCount, query);
@@ -210,8 +210,8 @@ typedef struct knnNode {
 } knnNode;
 
 void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, vector<knnPoint>> &knnPts) {
-    auto sqrtDist = [](vector<float> x, vector<float> y) {
-        return sqrt(pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2));};
+    auto sqrDist = [](vector<float> x, vector<float> y) {
+        return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);};
     priority_queue<knnNode, vector<knnNode>> unseenNodes;
     unseenNodes.emplace(knnNode{node, node->minSqrDist(query)});
     double dist, minDist;
@@ -224,7 +224,7 @@ void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, ve
             if (node->height == 0){
                 for (auto p: node->points.value()) {
                     minDist = knnPts.top().dist;
-                    dist = sqrtDist(query, p);
+                    dist = sqrDist(query, p);
                     if (dist < minDist) {
                         knnPoint kPt;
                         kPt.pt = p;
@@ -258,19 +258,18 @@ void KDBTree::kNNQuery(vector<float> p, map<string, double> &res, int k) {
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
     kNNSearch(root, query, knnPts);
 
-    //double dist;
-    //cerr << "KDBTree:" << endl;
-    //while (!knnPts.empty()) {
-        //p = knnPts.top().pt;
-        //dist = knnPts.top().dist;
-        //knnPts.pop();
-        //trace(p[0], p[1], dist);
-    //}
+    double sqrDist;
+    cerr << "KDBTree:" << endl;
+    while (!knnPts.empty()) {
+        p = knnPts.top().pt;
+        sqrDist = knnPts.top().dist;
+        knnPts.pop();
+        trace(p[0], p[1], sqrDist);
+    }
 }
 
-int KDBTree::getSize() {
-    int size = 0;
-    vector<int> nCount;
+int KDBTree::size() const {
+    int totalSize = 3*sizeof(int) + sizeof(SuperNode*);
     stack<SuperNode*> toVisit({root});
     SuperNode* branch;
     while (!toVisit.empty()) {
@@ -278,11 +277,12 @@ int KDBTree::getSize() {
         toVisit.pop();
         for (auto cn: branch->childNodes.value()) {
             if (cn->height > 0) toVisit.push(cn);
-            size += cn->getSize();
+            totalSize += cn->size();
         }
     }
-    size += (sizeof(bool) + sizeof(float) + sizeof(Split*))*splitCount;
+    int splitSize = (sizeof(bool) + sizeof(float) + sizeof(Split*))*splitCount;
+    totalSize += splitSize;
     cout << "Number of Splits: " << splitCount << endl;
-    cout << "Size of splits: " << float(((sizeof(bool) + sizeof(float) + sizeof(Split*))*splitCount)/1e6) << " MB" <<  endl;
-    return size;
+    cout << "Size of splits: " << float(splitSize/1e6) << " MB" <<  endl;
+    return totalSize;
 }

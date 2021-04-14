@@ -19,11 +19,11 @@ public:
 
     void snapshot();
     void fullSnapshot(vector<float>);
-    void load(string, string, long);
+    void load(string, long);
     void rangeQuery(float*, float*, map<string, double>&);
     void deleteQuery(vector<float>, map<string, double>&);
     void insertQuery(vector<float>, map<string, double>&);
     void kNNQuery(vector<float>, map<string, double>&, int);
     void insertPoint(SuperNode*, SuperNode*, vector<float>);
-    int getSize();
+    int size() const;
 };

@@ -238,21 +238,25 @@ int overlaps(vector<float> r, vector<float> p) {
     return true;
 }
 
-vector<vector<float>> SuperNode::scan(vector<float> query) const {
-    vector<vector<float>> matchedPoints;
-    matchedPoints.reserve(points->size());
-    if (contained(query)) return points.value();
+int SuperNode::scan(vector<float> query) const {
+    int totalPoints = 0;
+    //vector<vector<float>> matchedPoints;
+    //matchedPoints.reserve(points->size());
+    if (contained(query)) return points->size();
     for (auto p: points.value()){
         if (overlaps(query, p)) {
             // cout << "LSI: " << p[0] << "," << p[1] << endl;
-            matchedPoints.emplace_back(p);
+            //matchedPoints.emplace_back(p);
+            totalPoints++;
         }
     }
-    return matchedPoints;
+    return totalPoints;
 }
 
-int SuperNode::getSize() const {
-    return sizeof(float)*4 + sizeof(Split*);
+int SuperNode::size() const {
+    int branchSize = (childNodes) ? childNodes->size()*sizeof(SuperNode*) : 0;
+    int totalSize = branchSize + sizeof(int) + sizeof(float)*4 + sizeof(Split*);
+    return totalSize;
 }
 
 SuperNode::~SuperNode(){}

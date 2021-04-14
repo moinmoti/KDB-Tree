@@ -117,7 +117,7 @@ void deleteQuery(tuple<char, float, float, float> q, KDBTree *hTree, map<string,
     deleteLog["total"] += duration_cast<duration<double>>(high_resolution_clock::now() - startTime).count();
 }
 
-void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArray, vector<float> boundary, string prefix) {
+void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArray, vector<float> boundary, string logFile) {
 
     map<string, double> deleteLog, insertLog, rangeLog, knnLog;
 
@@ -144,7 +144,7 @@ void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArr
     cout << "Finish Querying..." << endl;
 
     ofstream log;
-    log.open(prefix + "log.txt", ios_base::app);
+    log.open(logFile, ios_base::app);
     if (!log.is_open()) cerr << "Unable to open log.txt";
 
     log << "------------------Results-------------------" << endl;
@@ -176,35 +176,41 @@ int main(int argCount, char **args) {
     map<string, string> config;
     string projectPath = string(args[1]);
     string queryType = string(args[2]);
+    int branchCap = stoi(string(args[3]));
+    int leafCap = stoi(string(args[4]));
+    string sign = "-" + to_string(branchCap) + "-" + to_string(leafCap);
+
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
     string queryFile = projectPath + "/data/" + queryType;
-    string dataFile = projectPath + "/data/aisCleanSample10000000.txt";
+    string dataFile = projectPath + "/data/aisCleanSample1e6.txt";
     //vector<int> branchCap = {5, 10, 15, 20, 25, 50, 100, 150, 200};
-    int branchCap = 25;
-    int leafCap = 200;
-    long limit = 1e7;
-    long totalPoints = 1e8;
+    long limit = 1e6;
+    long totalPoints = 1e6;
     int offset = 0;
     vector<float> boundary = {-180.0, -90.0, 180.0, 90.0};
 
-    cout << "---Evaluation--- " <<  endl;
+    cout << "---Generation--- " <<  endl;
 
-    ofstream log(prefix + "log.txt");
+    string logFile = prefix + "log" + sign + ".txt";
+    ofstream log(logFile);
     if (!log.is_open()) cout << "Unable to open log.txt";
     high_resolution_clock::time_point start = high_resolution_clock::now();
     cerr << "Defining KDBTree..." << endl;
     KDBTree kt = KDBTree(leafCap, branchCap, boundary, "Orient");
     cerr << "Loading KDBTree..." << endl;
-    kt.load(prefix, dataFile, limit);
+    kt.load(dataFile, limit);
     double hTreeCreationTime = duration_cast<duration<double>>(high_resolution_clock::now() - start).count();
-    log << "KDBTree Creation Time for branch size, " << branchCap << ": " << hTreeCreationTime << endl;
-    float ktSize = kt.getSize();
+    log << "KDBTree Creation Time: " << hTreeCreationTime << endl;
+    log << "Branch Capacity: " << branchCap << endl;
+    log << "Leaf Capacity: " << leafCap << endl;
+    float ktSize = kt.size();
     log << "KDBTree size in MB: " << float(ktSize/1e6) << endl;
 
     vector<tuple<char, float, float, float> > queryArray;
     createQuerySet(queryFile, queryArray, totalPoints, offset);
 
-    evaluate(&kt, queryArray, boundary, prefix);
+    cout << "---Evaluation--- " <<  endl;
+    evaluate(&kt, queryArray, boundary, logFile);
     return 0;
 }
