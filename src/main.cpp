@@ -20,27 +20,20 @@ void __f(const char* names, Arg1 && arg1, Args &&... args){
 #define trace(...)
 #endif
 
-void createQuerySet(string fileName, vector<tuple<char, float, float, float> > &queryArray, int points, int offSet = 0) {
+void createQuerySet(string fileName, vector<tuple<char, float, float, float> > &queryArray) {
     cerr << "Begin query creation for LSI" << endl;
     string line;
     int i = 0;
 
     ifstream file(fileName);
     if (file.is_open()) {
-        getline(file, line);
-        while (getline(file, line)) //Ignore headers
-        {
-            if (i < offSet) {
-                i++;
-                continue;
-            }
+        while (getline(file, line)) { //Ignore headers
             char type;
             float lat, lon, info;
             istringstream buf(line);
             buf >> type >> lat >> lon >> info;
             queryArray.emplace_back(make_tuple(type, lat, lon, info));
             i++;
-            if (i >= points+offSet) break;
         }
         file.close();
     }
@@ -48,8 +41,7 @@ void createQuerySet(string fileName, vector<tuple<char, float, float, float> > &
 }
 
 void knnQuery(tuple<char, float, float, float> q, KDBTree *hTree, map<string, double> &knnLog) {
-
-    float p[2];
+    array<float, 2> p;
     p[0] = get<2>(q); // Inserting longitude first
     p[1] = get<1>(q); // Inserting latitude second
     int k = get<3>(q);
@@ -58,67 +50,56 @@ void knnQuery(tuple<char, float, float, float> q, KDBTree *hTree, map<string, do
 
     map<string, double> res;
     high_resolution_clock::time_point startTime = high_resolution_clock::now();
-    hTree->kNNQuery(vector<float>({p[0], p[1]}), res, k);
+    hTree->kNNQuery(p, res, k);
     knnLog["knn_total " + to_string(k)] += duration_cast<duration<double>>(high_resolution_clock::now() - startTime).count();
     knnLog["count " + to_string(k)]++;
 }
 
-void rangeQuery(tuple<char, float, float, float> q, KDBTree *hTree, vector<float> boundary, map<string, double> &rangeLog) {
+void rangeQuery(tuple<char, float, float, float> q, KDBTree *hTree, array<float, 4> boundary, map<string, double> &rangeLog) {
+    array<float, 4> query;
+    float rs;
 
-    float p[2], p2[2], rs;
-
-    p[0] = get<2>(q) - 0.01; // Inserting longitude first
-    p[1] = get<1>(q) - 0.01; // Inserting latitude second
+    query[0] = get<2>(q) - 0.01; // Inserting longitude first
+    query[1] = get<1>(q) - 0.01; // Inserting latitude second
     rs   = get<3>(q);
 
-    p2[0] = min(boundary[2], p[0] + rs*(boundary[2]+abs(boundary[0])));
-    p2[1] = min(boundary[3], p[1] + rs*(boundary[3]+abs(boundary[1])));
+    query[2] = min(boundary[2], query[0] + rs*(boundary[2]+abs(boundary[0])));
+    query[3] = min(boundary[3], query[1] + rs*(boundary[3]+abs(boundary[1])));
 
     map<string, double> res;
     high_resolution_clock::time_point startTime = high_resolution_clock::now();
-    hTree->rangeQuery(p, p2, res);
+    hTree->rangeQuery(query, res);
     rangeLog["total " + to_string(rs)]     += duration_cast<duration<double>>(high_resolution_clock::now() - startTime).count();
     rangeLog["count " + to_string(rs)]++;
 }
 
 void insertQuery(tuple<char, float, float, float> q, KDBTree *hTree, map<string, double> &insertLog) {
-
-    double p[2];
+    array<float, 2> p;
     int id;
     p[0] = get<2>(q); // Inserting longitude first
     p[1] = get<1>(q); // Inserting latitude second
     id = get<3>(q);
 
-    float pf[2];
-    pf[0] = get<2>(q);
-    pf[1] = get<1>(q);
-
     map<string, double> res;
     high_resolution_clock::time_point startTime = high_resolution_clock::now();
-    hTree->insertQuery(vector<float>({pf[0], pf[1]}), res);
+    hTree->insertQuery(p, res);
     insertLog["total"] += duration_cast<duration<double>>(high_resolution_clock::now() - startTime).count();
 }
 
 void deleteQuery(tuple<char, float, float, float> q, KDBTree *hTree, map<string, double> &deleteLog) {
-
-    double p[2];
+    array<float, 2> p;
     int id;
     p[0] = get<2>(q); // Inserting longitude first
     p[1] = get<1>(q); // Inserting latitude second
     id = get<3>(q);
 
-    float pf[2];
-    pf[0] = get<2>(q);
-    pf[1] = get<1>(q);
-
     high_resolution_clock::time_point startTime = high_resolution_clock::now();
     map<string, double> res;
-    hTree->deleteQuery(vector<float>({pf[0], pf[1]}), res);
+    hTree->deleteQuery(p, res);
     deleteLog["total"] += duration_cast<duration<double>>(high_resolution_clock::now() - startTime).count();
 }
 
-void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArray, vector<float> boundary, string logFile) {
-
+void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArray, array<float, 4> boundary, string logFile) {
     map<string, double> deleteLog, insertLog, rangeLog, knnLog;
 
     cout << "Begin Querying..." << endl;
@@ -172,7 +153,6 @@ void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArr
 
 // main with arguments to be called by python wrapper
 int main(int argCount, char **args) {
-
     map<string, string> config;
     string projectPath = string(args[1]);
     string queryType = string(args[2]);
@@ -182,13 +162,12 @@ int main(int argCount, char **args) {
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
-    string queryFile = projectPath + "/data/" + queryType;
-    string dataFile = projectPath + "/data/aisCleanSample1e6.txt";
+    string queryFile = projectPath + "/data/QueryFiles/" + queryType;
+    string dataFile = projectPath + "/data/ships1e8.txt";
     //vector<int> branchCap = {5, 10, 15, 20, 25, 50, 100, 150, 200};
     long limit = 1e6;
-    long totalPoints = 1e6;
     int offset = 0;
-    vector<float> boundary = {-180.0, -90.0, 180.0, 90.0};
+    array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
 
     cout << "---Generation--- " <<  endl;
 
@@ -198,17 +177,18 @@ int main(int argCount, char **args) {
     high_resolution_clock::time_point start = high_resolution_clock::now();
     cerr << "Defining KDBTree..." << endl;
     KDBTree kt = KDBTree(leafCap, branchCap, boundary, "Orient");
-    cerr << "Loading KDBTree..." << endl;
-    kt.load(dataFile, limit);
+    cerr << "Bulkloading KDBTree..." << endl;
+    kt.bulkload(dataFile, limit);
     double hTreeCreationTime = duration_cast<duration<double>>(high_resolution_clock::now() - start).count();
     log << "KDBTree Creation Time: " << hTreeCreationTime << endl;
     log << "Branch Capacity: " << branchCap << endl;
     log << "Leaf Capacity: " << leafCap << endl;
     float ktSize = kt.size();
     log << "KDBTree size in MB: " << float(ktSize/1e6) << endl;
+    kt.snapshot();
 
     vector<tuple<char, float, float, float> > queryArray;
-    createQuerySet(queryFile, queryArray, totalPoints, offset);
+    createQuerySet(queryFile, queryArray);
 
     cout << "---Evaluation--- " <<  endl;
     evaluate(&kt, queryArray, boundary, logFile);

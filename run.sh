@@ -1,6 +1,6 @@
 #rm -rf Experiments/*
-#QT="insertQueries10000.txt"
-QF="kNNTestQuery.txt"
+QF="queriesI0Shuffled.txt"
+#QF="knnTestQueries.txt"
 mkdir -p Experiments/$QF
 #cmake -G "Unix Makefiles" .
 cmake -S . -B build

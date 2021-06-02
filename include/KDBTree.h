@@ -12,18 +12,20 @@ public:
     int branchCap;
     int leafCap;
     int splitCount;
-    SuperNode* root;
+    SuperNode *root;
 
-    KDBTree(int, int, vector<float>, string);
+    KDBTree(int, int, array<float, 4>, string);
     ~KDBTree();
 
     void snapshot();
-    void fullSnapshot(vector<float>);
     void load(string, long);
-    void rangeQuery(float*, float*, map<string, double>&);
-    void deleteQuery(vector<float>, map<string, double>&);
-    void insertQuery(vector<float>, map<string, double>&);
-    void kNNQuery(vector<float>, map<string, double>&, int);
-    void insertPoint(SuperNode*, SuperNode*, vector<float>);
+    void leafFission(SuperNode *);
+    void branchFission(SuperNode *);
+    void bulkload(string, long);
+    void rangeQuery(array<float, 4>, map<string, double> &);
+    void deleteQuery(array<float, 2>, map<string, double> &);
+    void insertQuery(array<float, 2>, map<string, double> &);
+    void kNNQuery(array<float, 2>, map<string, double> &, int);
+    void insertPoint(SuperNode *, SuperNode *, array<float, 2>);
     int size() const;
 };

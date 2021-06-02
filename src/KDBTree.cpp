@@ -13,7 +13,7 @@ void __f(const char* name, Arg1 && arg1){
 }
 template <typename Arg1, typename... Args>
 void __f(const char* names, Arg1 && arg1, Args &&... args){
-    const char* comma = strchr(names+1,','); cerr.write(names,comma-names) << " : " << arg1 << " | "; __f(comma+1, args...);
+    const char* comma = strchr(names+1,','); cerr.write(names,comma-names) << " : " << setw(9) << arg1 << " | "; __f(comma+1, args...);
 }
 #else
 #define trace(...)
@@ -22,35 +22,19 @@ void __f(const char* names, Arg1 && arg1, Args &&... args){
 #define NUMDIMS 2
 #define all(c) c.begin(),c.end()
 
-void printRect(string Rect, vector<float> r) {
+void printRect(string Rect, array<float, 4> r) {
     cerr << Rect << ": " << r[0] << " | " << r[1] << " | " << r[2] << " | " << r[3] << endl;
 }
 
-KDBTree::KDBTree(int _leafCap, int _branchCap, vector<float> _boundary, string type) {
+KDBTree::KDBTree(int _leafCap, int _branchCap, array<float, 4> _boundary, string type) {
     leafCap = _leafCap;
     branchCap = _branchCap;
     splitCount = 0;
 
-    SuperNode *firstLeaf;
-    if (type == "Orient") {
-        root = new OrientNode();
-        firstLeaf = new OrientNode();
-    } else cerr << "Invalid Partition Scheme" << endl;
-
+    if (type == "Orient") root = new OrientNode();
+    else cerr << "Invalid Partition Scheme" << endl;
     root->rect = _boundary;
-    root->height = 1;
-    root->childNodes = vector<SuperNode*>();
-
-    firstLeaf->rect = root->rect;
-    firstLeaf->height = 0;
-    firstLeaf->points = vector<vector<float>>();
-
-    Split *split = new Split();
-    split->axis = (root->rect[2]-root->rect[0]) > (root->rect[3] - root->rect[1]);
-    split->pt = root->rect[split->axis];
-    root->guide = split;
-    firstLeaf->guide = split;
-    root->childNodes->emplace_back(firstLeaf);
+    root->height = 0;
 }
 
 KDBTree::~KDBTree() {}
@@ -58,7 +42,7 @@ KDBTree::~KDBTree() {}
 void KDBTree::snapshot() {
     ofstream log("KDBTree.csv");
     stack<SuperNode*> toVisit({root});
-    SuperNode* branch;
+    SuperNode *branch;
     while (!toVisit.empty()) {
         branch = toVisit.top();
         toVisit.pop();
@@ -66,52 +50,43 @@ void KDBTree::snapshot() {
         for (auto p: branch->rect) log << "," << p;
         log << endl;
         for (auto cn: branch->childNodes.value()) {
-            if (cn->height > 0) toVisit.push(cn);
-            else {
+            if (cn->points) {
                 log << cn->height << "," << cn->points->size();
                 for (auto p: cn->rect) log << "," << p;
                 log << endl;
             }
+            else toVisit.push(cn);
         }
     }
     log.close();
 }
 
-/*
-void KDBTree::fullSnapshot(vector<float> query) {
-    ofstream log("fullSnapshot.csv");
-    int i = 1;
-    for (auto pn: parentNodes) {
-        log << "0," << pn->children.size();
-        for (auto p: pn->rect) log << "," << p;
-        log << endl;
-        for (auto cn: pn->children) {
-            //log << i << "," << cn->points.size();
-            for (auto p: cn->rect) log << "," << p;
-            log << endl;
-            for (auto h: cn->hubs) {
-                log << ">> ";
-                for (auto p: h.second->rect) log << "," << p;
-                log << endl;
-            }
-        }
-        i++;
+void KDBTree::branchFission(SuperNode *node) {
+    printRect("Node", node->rect);
+    vector<SuperNode*> branches = node->splitBranch(root);
+    printRect("First Branch", branches[0]->rect);
+    printRect("Second Branch", branches[1]->rect);
+    for (auto branch: branches) {
+        if (branch->childNodes->size() > branchCap) branchFission(branch);
+        else root->childNodes->emplace_back(branch);
     }
-    for (auto p: query) log << p << ',';
-    log << "\n" << "**************************************************" << "\n" << endl;
-    log.close();
 }
-*/
 
-void KDBTree::load(string filename, long limit) {
+void KDBTree::leafFission(SuperNode *node) {
+    vector<SuperNode*> leaves = node->splitLeaf(root);
+    for (auto leaf: leaves) {
+        if (leaf->points->size() > leafCap) leafFission(leaf);
+        else root->childNodes->emplace_back(leaf);
+    }
+}
+
+void KDBTree::bulkload(string filename, long limit) {
     string line;
     ifstream file(filename);
 
     int i = 0;
-    map<string, double> res;
-
-    trace(leafCap, branchCap);
-
+    vector<array<float, 2>> Points;
+    Points.reserve(limit);
     if (file.is_open()) {
         getline(file, line);
         while (getline(file, line)) {
@@ -119,48 +94,57 @@ void KDBTree::load(string filename, long limit) {
             float lat, lon;
             istringstream buf(line);
             buf >> id >> lat >> lon;
-            vector<float> point = {lon, lat};
-            insertQuery(point, res);
+            array pt{lon, lat};
+            Points.emplace_back(pt);
             if (++i >= limit) break;
-            //snapshot();
         }
         file.close();
     }
     else cerr << "Data file " << filename << " not found!";
 
-    snapshot();
+    cerr << "Initiate leaf fission" << endl;
+    root->points = Points;
+    root->childNodes = vector<SuperNode*>();
+    root->splits = vector<Split*>();
+    leafFission(root);
+    root->height = 1;
+    root->points->clear();
+    root->points.reset();
+
+    cerr << "Initiate branch fission" << endl;
+    while (root->childNodes->size() > branchCap) {
+        trace(root->height);
+        branchFission(root);
+        root->height++;
+    }
 }
 
-void KDBTree::insertPoint(SuperNode *pn, SuperNode *node, vector<float> p) {
+void KDBTree::insertPoint(SuperNode *pn, SuperNode *node, array<float, 2> p) {
     vector<SuperNode*> newNodes;
-    if (node->height > 0){
+    if (node->points) {
+        node->points->emplace_back(p);
+        if (node->points->size() > leafCap) newNodes = node->splitLeaf(pn);
+    } else {
         auto cn = node->childNodes->begin();
         while (!(*cn)->containsPt(p)) cn++;
         insertPoint(node, *cn, p);
-        if (node->childNodes->size() > branchCap) newNodes = node->splitBranch();
-    } else {
-        node->points->emplace_back(p);
-        if (node->points->size() > leafCap) newNodes = node->splitLeaf();
+        if (node->childNodes->size() > branchCap) newNodes = node->splitBranch(pn);
     }
-    if (!newNodes.empty()){
-        if (node == root) {
-            root->childNodes->clear();
-            root->height++;
-        }
-        else pn->childNodes->erase(find(all(pn->childNodes.value()), node));
-        for (auto cn: newNodes) pn->childNodes->emplace_back(cn);
-        splitCount++;
-    }
+    if (node == root) {
+        root->childNodes->clear(); // When this is root.
+        root->height++;
+    } else pn->childNodes->erase(find(all(pn->childNodes.value()), node));
+    for (auto cn: newNodes) pn->childNodes->emplace_back(cn);
 }
 
-void KDBTree::insertQuery(vector<float> p, map<string, double> &res) {
+void KDBTree::insertQuery(array<float, 2> p, map<string, double> &res) {
     //vector<float> query = {p[0], p[1], p[0], p[1]};
     insertPoint(root, root, p);
 }
 
-void KDBTree::deleteQuery(vector<float> p, map<string, double> &res) {
+void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &res) {
     SuperNode *node = root;
-    while (node->height == 0) {
+    while (node->childNodes) {
         auto cn = node->childNodes->begin();
         while (!(*cn)->containsPt(p)) cn++;
         node = *cn;
@@ -169,32 +153,22 @@ void KDBTree::deleteQuery(vector<float> p, map<string, double> &res) {
     if (pt != node->points->end()) node->points->erase(pt);
 }
 
-void rangeSearch(SuperNode *node, int &pointCount, vector<float> query) {
-    if (node->height == 0) pointCount += node->scan(query);
+void rangeSearch(SuperNode *node, int &pointCount, array<float, 4> query) {
+    if (node->points) pointCount += node->scan(query);
     else {
         for (auto cn: node->childNodes.value())
             if (cn->overlap(query)) rangeSearch(cn, pointCount, query);
     }
 }
 
-void KDBTree::rangeQuery(float *p1, float *p2, map<string, double> &res) {
-
-    float lb[2], hb[2];
-    SuperNode* foundNode;
-
-    lb[0] = min(p1[0], p2[0]);
-    lb[1] = min(p1[1], p2[1]);
-    hb[0] = max(p1[0], p2[0]);
-    hb[1] = max(p1[1], p2[1]);
-
-    vector<float> query = {lb[0], lb[1], hb[0], hb[1]};
+void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &res) {
     int pointCount = 0;
     rangeSearch(root, pointCount, query);
     trace(pointCount);
 }
 
 typedef struct knnPoint {
-    vector<float> pt;
+    array<float, 2> pt;
     double dist = FLT_MAX;
     bool operator<(const knnPoint &second) const {
         return dist < second.dist;
@@ -209,8 +183,8 @@ typedef struct knnNode {
     }
 } knnNode;
 
-void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, vector<knnPoint>> &knnPts) {
-    auto sqrDist = [](vector<float> x, vector<float> y) {
+void kNNSearch(SuperNode *node, array<float, 4> query, priority_queue<knnPoint, vector<knnPoint>> &knnPts) {
+    auto sqrDist = [](array<float, 4> x, array<float ,2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);};
     priority_queue<knnNode, vector<knnNode>> unseenNodes;
     unseenNodes.emplace(knnNode{node, node->minSqrDist(query)});
@@ -221,7 +195,7 @@ void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, ve
         unseenNodes.pop();
         minDist = knnPts.top().dist;
         if (dist < minDist) {
-            if (node->height == 0){
+            if (node->points){
                 for (auto p: node->points.value()) {
                     minDist = knnPts.top().dist;
                     dist = sqrDist(query, p);
@@ -237,7 +211,7 @@ void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, ve
             } else {
                 for (auto cn: node->childNodes.value()) {
                     minDist = knnPts.top().dist;
-                    dist =cn->minSqrDist(query);
+                    dist = cn->minSqrDist(query);
                     if (dist < minDist) {
                         knnNode kn;
                         kn.sn = cn;
@@ -250,33 +224,34 @@ void kNNSearch(SuperNode* node, vector<float> query, priority_queue<knnPoint, ve
     }
 }
 
-void KDBTree::kNNQuery(vector<float> p, map<string, double> &res, int k) {
+void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &res, int k) {
     SuperNode* foundNode;
-    vector<float> query = {p[0], p[1], p[0], p[1]};
+    array query{p[0], p[1], p[0], p[1]};
+    printRect("Query", query);
 
     vector<knnPoint> tempPts(k);
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
     kNNSearch(root, query, knnPts);
 
     double sqrDist;
-    cerr << "KDBTree:" << endl;
     while (!knnPts.empty()) {
         p = knnPts.top().pt;
         sqrDist = knnPts.top().dist;
         knnPts.pop();
         trace(p[0], p[1], sqrDist);
     }
+    cerr << endl;
 }
 
 int KDBTree::size() const {
     int totalSize = 3*sizeof(int) + sizeof(SuperNode*);
     stack<SuperNode*> toVisit({root});
-    SuperNode* branch;
+    SuperNode *branch;
     while (!toVisit.empty()) {
         branch = toVisit.top();
         toVisit.pop();
         for (auto cn: branch->childNodes.value()) {
-            if (cn->height > 0) toVisit.push(cn);
+            if (cn->childNodes) toVisit.push(cn);
             totalSize += cn->size();
         }
     }

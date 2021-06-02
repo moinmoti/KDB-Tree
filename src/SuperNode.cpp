@@ -28,8 +28,8 @@ void __f(const char* names, Arg1 && arg1, Args &&... args){
 //Rectangle Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
-vector<float> SuperNode::combineRect(vector<float> r) {
-    vector<float> newRect;
+array<float, 4> SuperNode::combineRect(array<float, 4> r) {
+    array<float, 4> newRect;
     for (int i = 0; i < NUMDIMS; i++)  {
         newRect[i] = min(rect[i], r[i]);
         newRect[i+NUMDIMS] = max(rect[i+NUMDIMS], r[i+NUMDIMS]);
@@ -37,19 +37,19 @@ vector<float> SuperNode::combineRect(vector<float> r) {
     return newRect;
 }
 
-bool SuperNode::overlap(vector<float> r) const {
+bool SuperNode::overlap(array<float, 4> r) const {
     for (int i=0; i<NUMDIMS; i++)
         if (rect[i] > r[i+NUMDIMS] || r[i] > rect[i+NUMDIMS])
             return false;
     return true;
 }
 
-float SuperNode::edgeOverlap(int d, vector<float> r) const {
+float SuperNode::edgeOverlap(int d, array<float, 4> r) const {
     int i = !(d % 2);
     return min(rect[i+NUMDIMS], r[i+NUMDIMS]) - max(rect[i], r[i]);
 }
 
-float SuperNode::overlapArea(vector<float> r) const {
+float SuperNode::overlapArea(array<float, 4> r) const {
     float overlap=1.0;
     for (int i=0; i<NUMDIMS; i++){
         if (rect[i] >= r[i+NUMDIMS] || r[i] >= rect[i+NUMDIMS])
@@ -59,102 +59,84 @@ float SuperNode::overlapArea(vector<float> r) const {
     return overlap;
 }
 
-bool contains(vector<float> r, vector<float> p) {
+bool contains(array<float, 4> r, array<float, 2> p) {
     bool result = true;
     for (int i = 0; i < NUMDIMS; i++)
         result = result & (r[i] <= p[i]) & (r[i+NUMDIMS] >= p[i]);
     return result;
 }
 
-bool SuperNode::containsPt(vector<float> p) const {
+bool SuperNode::containsPt(array<float, 2> p) const {
     bool result = true;
     for (int i = 0; i < NUMDIMS; i++)
         result = result & (rect[i] <= p[i]) & (rect[i+NUMDIMS] >= p[i]);
     return result;
 }
 
-bool SuperNode::contained(vector<float> r) const {
+bool SuperNode::contained(array<float, 4> r) const {
     bool result = true;
     for (int i = 0; i < NUMDIMS; i++)
         result = result & (rect[i] >= r[i]) & (rect[i+NUMDIMS] <= r[i+NUMDIMS]);
   return result;
 }
 
-vector<float> SuperNode::getCenter() const {
-    return vector<float> {
+array<float, 2> SuperNode::getCenter() const {
+    return array<float, 2> {
         (rect[0] + rect[2])/2,
         (rect[1] + rect[3])/2
     };
 }
 
-vector<float> SuperNode::getOverlapCenter(vector<float> r) const {
-    return vector<float> {
+array<float, 2> SuperNode::getOverlapCenter(array<float, 4> r) const {
+    return array<float, 2> {
         (max(r[0], rect[0]) + min(r[2], rect[2]))/2,
         (max(r[1], rect[1]) + min(r[3], rect[3]))/2
     };
 }
 
-double SuperNode::minManhattanDist(vector<float> r) const {
+double SuperNode::minManhattanDist(array<float, 4> r) const {
     bool left = r[2] < rect[0];
     bool right = rect[2] < r[0];
     bool bottom = r[3] < rect[1];
     bool top = rect[3] < r[1];
-    if (top && left)
-        return distManhattan(rect[0], rect[3], r[2], r[1]);
-    if (left && bottom)
-        return distManhattan(rect[0], rect[1], r[2], r[3]);
-    if (bottom && right)
-        return distManhattan(rect[2], rect[1], r[0], r[3]);
-    if (right && top)
-        return distManhattan(rect[2], rect[3], r[0], r[1]);
-    if (left)
-        return abs(rect[0] - r[2]);
-    if (right)
-        return abs(r[0] - rect[2]);
-    if (bottom)
-        return abs(rect[1] - r[3]);
-    if (top)
+    if (top) {
+        if (left) return distManhattan(rect[0], rect[3], r[2], r[1]);
+        if (right) return distManhattan(rect[2], rect[3], r[0], r[1]);
         return abs(r[1] - rect[3]);
+    }
+    if (bottom) {
+        if (left) return distManhattan(rect[0], rect[1], r[2], r[3]);
+        if (right) return distManhattan(rect[2], rect[1], r[0], r[3]);
+        return abs(rect[1] - r[3]);
+    }
+    if (left) return abs(rect[0] - r[2]);
+    if (right) return abs(r[0] - rect[2]);
     return 0;
 }
 
-double SuperNode::minSqrDist(vector<float> r) const {
+double SuperNode::minSqrDist(array<float, 4> r) const {
     bool left = r[2] < rect[0];
     bool right = rect[2] < r[0];
     bool bottom = r[3] < rect[1];
     bool top = rect[3] < r[1];
-    if (top && left)
-        return dist(rect[0], rect[3], r[2], r[1]);
-    if (left && bottom)
-        return dist(rect[0], rect[1], r[2], r[3]);
-    if (bottom && right)
-        return dist(rect[2], rect[1], r[0], r[3]);
-    if (right && top)
-        return dist(rect[2], rect[3], r[0], r[1]);
-    if (left)
-        return (rect[0] - r[2])*(rect[0] - r[2]);
-    if (right)
-        return (r[0] - rect[2])*(r[0] - rect[2]);
-    if (bottom)
-        return (rect[1] - r[3])*(rect[1] - r[3]);
-    if (top)
+    if (top) {
+        if (left) return dist(rect[0], rect[3], r[2], r[1]);
+        if (right) return dist(rect[2], rect[3], r[0], r[1]);
         return (r[1] - rect[3])*(r[1] - rect[3]);
+    }
+    if (bottom) {
+        if (left) return dist(rect[0], rect[1], r[2], r[3]);
+        if (right) return dist(rect[2], rect[1], r[0], r[3]);
+        return (rect[1] - r[3])*(rect[1] - r[3]);
+    }
+    if (left) return (rect[0] - r[2])*(rect[0] - r[2]);
+    if (right) return (r[0] - rect[2])*(r[0] - rect[2]);
     return 0;
 }
 
-void SuperNode::createRect(vector<float> r, Split *_split, int side) {
+void SuperNode::createRect(array<float, 4> r, Split *_split, int side) {
     rect = r;
-    rect[_split->axis + side*NUMDIMS] = _split->pt;
-}
-
-void SuperNode::setGuide(Split *newSplit, Split *pGuide) {
-    if (abs(rect[0] - rect[2]) > abs(rect[1] - rect[3])) {
-        if (newSplit->axis == V) guide = pGuide;
-        else guide = newSplit;
-    } else {
-        if (newSplit->axis == V) guide = newSplit;
-        else guide = pGuide;
-    }
+    rect[_split->axis + !side*NUMDIMS] = _split->pt[_split->axis];
 }
 
 //void SuperNode::mergeNode(int mergeDir, SuperNode *expiredNode) {
@@ -192,45 +174,51 @@ void SuperNode::setGuide(Split *newSplit, Split *pGuide) {
     //return 0;
 //}
 
-vector<SuperNode*> SuperNode::splitLeaf(Split *newSplit, vector<SuperNode*> sns) {
-    bool side =  getCenter()[!newSplit->axis] < guide->pt;
-    guide->branches[side].emplace_back(newSplit);
+vector<SuperNode*> SuperNode::splitLeaf(SuperNode *pn, Split *newSplit, vector<SuperNode*> sns) {
     for (int i = 0; i < sns.size(); i++) {
         sns[i]->height = 0;
         sns[i]->createRect(rect, newSplit, i);
-        sns[i]->setGuide(newSplit, guide);
-        sns[i]->points = vector<vector<float>>();
+        sns[i]->points = vector<array<float, 2>>();
     }
 
     // Splitting points
     for (auto p: (points).value()) {
-        if (p[newSplit->axis] < newSplit->pt)
-            sns[1]->points->emplace_back(p);
-        else if (p[newSplit->axis] > newSplit->pt)
+        if (p[newSplit->axis] < newSplit->pt[newSplit->axis])
             sns[0]->points->emplace_back(p);
+        else if (p[newSplit->axis] > newSplit->pt[newSplit->axis])
+            sns[1]->points->emplace_back(p);
         else {
             if (sns[0]->points->size() < sns[1]->points->size())
                 sns[0]->points->emplace_back(p);
             else sns[1]->points->emplace_back(p);
         }
     }
+
+    pn->splits->emplace_back(newSplit);
     return sns;
 }
 
-vector<SuperNode*> SuperNode::splitBranch(Split *bestSplit, vector<SuperNode*> sns) {
+vector<SuperNode*> SuperNode::splitBranch(SuperNode *pn, vector<SuperNode*> sns) {
+    Split *bestSplit = splits.value()[0];
     for (int i = 0; i < sns.size(); i++) {
         sns[i]->height = height;
         sns[i]->createRect(rect, bestSplit, i);
-        sns[i]->setGuide(bestSplit, guide);
         sns[i]->childNodes = vector<SuperNode*>();
         sns[i]->childNodes->reserve(childNodes->size());
+        sns[i]->splits = vector<Split*>();
     }
-    for (auto c: childNodes.value())
-        sns[c->getCenter()[bestSplit->axis] < bestSplit->pt]->childNodes->emplace_back(c);
+    for (auto cn: childNodes.value())
+        sns[cn->getCenter()[bestSplit->axis] > bestSplit->pt[bestSplit->axis]]->childNodes->emplace_back(cn);
+    for (auto isplit = next(splits->begin()); isplit != splits->end(); isplit++)
+        sns[(*isplit)->pt[bestSplit->axis] > bestSplit->pt[bestSplit->axis]]->splits->emplace_back(*isplit);
+
+    childNodes->clear();
+    splits->clear();
+    pn->splits->emplace_back(bestSplit);
     return sns;
 }
 
-int overlaps(vector<float> r, vector<float> p) {
+int overlaps(array<float, 4> r, array<float, 2> p) {
     for (int i=0; i<NUMDIMS; i++) {
         if (r[i] > p[i] || p[i] > r[i + NUMDIMS])
             return false;
@@ -238,18 +226,11 @@ int overlaps(vector<float> r, vector<float> p) {
     return true;
 }
 
-int SuperNode::scan(vector<float> query) const {
+int SuperNode::scan(array<float, 4> query) const {
     int totalPoints = 0;
-    //vector<vector<float>> matchedPoints;
-    //matchedPoints.reserve(points->size());
-    if (contained(query)) return points->size();
-    for (auto p: points.value()){
-        if (overlaps(query, p)) {
-            // cout << "LSI: " << p[0] << "," << p[1] << endl;
-            //matchedPoints.emplace_back(p);
-            totalPoints++;
-        }
-    }
+    //if (contained(query)) return points->size();
+    for (auto p: points.value())
+        if (overlaps(query, p)) totalPoints++;
     return totalPoints;
 }
 
@@ -259,4 +240,7 @@ int SuperNode::size() const {
     return totalSize;
 }
 
-SuperNode::~SuperNode(){}
+SuperNode::~SuperNode() {
+    if (points) points->clear();
+    else childNodes->clear();
+}

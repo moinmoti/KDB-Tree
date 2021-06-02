@@ -24,39 +24,30 @@ void __f(const char* names, Arg1 && arg1, Args &&... args){
 #define V 0
 #define H 1
 
-vector<float> getMedian(vector<vector<float>> pts) {
+array<float, 2> getMedian(vector<array<float, 2>> pts) {
     if (pts.size() % 2) return pts[pts.size()/2];
-    vector<float> l, r;
+    array<float, 2> l, r;
     l = pts[pts.size()/2-1];
     r = pts[pts.size()/2];
-    return vector<float>({(l[0] + r[0])/2, (l[1] + r[1])/2});
+    return array {(l[0] + r[0])/2, (l[1] + r[1])/2};
 }
 
-vector<SuperNode*> OrientNode::splitLeaf(Split *newSplit, vector<SuperNode*> sns) {
+vector<SuperNode*> OrientNode::splitLeaf(SuperNode *pn, Split *newSplit, vector<SuperNode*> sns) {
     sns = {new OrientNode(), new OrientNode()};
 
-    bool splitCase = !guide->axis;
-    sort(all(points.value()), [splitCase](const vector<float> &l, const vector<float> &r) {
-        return l[splitCase] < r[splitCase];
+    bool axis = (rect[2] - rect[0]) < (rect[3] - rect[1]);
+    sort(all(points.value()), [axis](const array<float, 2> &l, const array<float, 2> &r) {
+        return l[axis] < r[axis];
     });
-    float median = getMedian(points.value())[splitCase];
+    array median = getMedian(points.value());
 
     newSplit = new Split();
-    newSplit->axis = splitCase;
+    newSplit->axis = axis;
     newSplit->pt = median;
-    return SuperNode::splitLeaf(newSplit, sns);
+    return SuperNode::splitLeaf(pn, newSplit, sns);
 }
 
-vector<SuperNode*> OrientNode::splitBranch(Split *bestSplit, vector<SuperNode*> sns) {
+vector<SuperNode*> OrientNode::splitBranch(SuperNode *pn, vector<SuperNode*> sns) {
     sns = {new OrientNode(), new OrientNode()};
-
-    bool side = getCenter()[guide->axis] < guide->pt;
-    for (auto cs: guide->branches[side]) {
-        if (rect[cs->axis] < cs->pt && cs->pt < rect[cs->axis + NUMDIMS]) {
-            bestSplit = cs;
-            break;
-        }
-    }
-
-    return SuperNode::splitBranch(bestSplit, sns);
+    return SuperNode::splitBranch(pn, sns);
 }
