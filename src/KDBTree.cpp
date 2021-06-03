@@ -62,10 +62,7 @@ void KDBTree::snapshot() {
 }
 
 void KDBTree::branchFission(SuperNode *node) {
-    printRect("Node", node->rect);
     vector<SuperNode*> branches = node->splitBranch(root);
-    printRect("First Branch", branches[0]->rect);
-    printRect("Second Branch", branches[1]->rect);
     for (auto branch: branches) {
         if (branch->childNodes->size() > branchCap) branchFission(branch);
         else root->childNodes->emplace_back(branch);
@@ -113,7 +110,6 @@ void KDBTree::bulkload(string filename, long limit) {
 
     cerr << "Initiate branch fission" << endl;
     while (root->childNodes->size() > branchCap) {
-        trace(root->height);
         branchFission(root);
         root->height++;
     }
@@ -240,7 +236,6 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &res, int k) {
         knnPts.pop();
         trace(p[0], p[1], sqrDist);
     }
-    cerr << endl;
 }
 
 int KDBTree::size() const {

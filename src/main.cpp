@@ -121,6 +121,7 @@ void evaluate(KDBTree *hTree, vector<tuple<char, float, float, float> > queryArr
             deleteLog["count"]++;
             //trace(deleteLog["count"]);
         } else cerr << "Invalid Query!!!" << endl;
+        cerr << endl;
     }
     cout << "Finish Querying..." << endl;
 

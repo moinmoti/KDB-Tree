@@ -4,11 +4,12 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
-leaves = []
+height = 1
+nodes = []
 with open("KDBTree.csv") as f:
     for i, line in enumerate(f):
-        if int(line.split(",")[0]) == 0:
-            leaves.append(
+        if int(line.split(",")[0]) == height:
+            nodes.append(
                 (
                     float(line.split(",")[2]),
                     float(line.split(",")[3]),
@@ -29,7 +30,7 @@ axes.set_ylim([-90, 90])
 
 # Create a Rectangle patch
 
-for l in leaves:
+for l in nodes:
     rect = patches.Rectangle(
         (l[0], l[1]),
         l[2] - l[0],
@@ -53,4 +54,4 @@ for l in leaves:
 # for model in points:
 #   ax.scatter([x[0] for x in points[model]], [y[1] for y in points[model]], color=(r.uniform(0,1),r.uniform(0,1),r.uniform(0,1)), alpha = 1, s = 0.5)
 
-plt.savefig("KDBTree.png")
+plt.savefig("KDBTree-" + str(height) + ".png")
