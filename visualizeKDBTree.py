@@ -4,7 +4,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
-height = 1
+height = 0
 nodes = []
 with open("KDBTree.csv") as f:
     for i, line in enumerate(f):
@@ -54,4 +54,4 @@ for l in nodes:
 # for model in points:
 #   ax.scatter([x[0] for x in points[model]], [y[1] for y in points[model]], color=(r.uniform(0,1),r.uniform(0,1),r.uniform(0,1)), alpha = 1, s = 0.5)
 
-plt.savefig("KDBTree-" + str(height) + ".png")
+plt.savefig("snapshots/KDBTree-" + str(height) + ".png")

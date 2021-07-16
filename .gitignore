@@ -5,6 +5,7 @@ KDBTree
 
 # Other
 Experiments
+snapshots
 data
 *._*
 *DS_Store*
@@ -13,4 +14,6 @@ data
 *.csv
 *.png
 *.err
+*.json
+.python-version
 Index
