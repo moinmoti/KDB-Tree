@@ -29,6 +29,10 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 // Rectangle Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
+void printNode(string str, array<float, 4> r) {
+    cerr << str << ": " << r[0] << " | " << r[1] << " | " << r[2] << " | " << r[3] << endl;
+}
+
 array<float, 4> SuperNode::combineRect(array<float, 4> r) {
     array<float, 4> newRect;
     for (int i = 0; i < NUMDIMS; i++) {
@@ -240,7 +244,8 @@ int overlaps(array<float, 4> r, array<float, 2> p) {
 
 int SuperNode::scan(array<float, 4> query) const {
     int totalPoints = 0;
-    if (contained(query)) return points->size();
+    if (contained(query))
+        return points->size();
     for (auto p : points.value())
         if (overlaps(query, p))
             totalPoints++;

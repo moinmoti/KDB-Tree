@@ -17,7 +17,7 @@ public:
     KDBTree(int, int, array<float, 4>, string);
     ~KDBTree();
 
-    void snapshot();
+    void snapshot() const;
     void load(string, long);
     void leafFission(SuperNode *);
     void branchFission(SuperNode *);
@@ -27,5 +27,5 @@ public:
     void insertQuery(array<float, 2>, map<string, double> &);
     void kNNQuery(array<float, 2>, map<string, double> &, int);
     void insertPoint(SuperNode *, SuperNode *, array<float, 2>);
-    int size() const;
+    int size(map<string, double> &) const;
 };

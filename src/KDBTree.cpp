@@ -42,7 +42,7 @@ KDBTree::KDBTree(int _leafCap, int _branchCap, array<float, 4> _boundary, string
 
 KDBTree::~KDBTree() {}
 
-void KDBTree::snapshot() {
+void KDBTree::snapshot() const {
     ofstream log("KDBTree.csv");
     stack<SuperNode *> toVisit({root});
     SuperNode *branch;
@@ -59,8 +59,9 @@ void KDBTree::snapshot() {
                 for (auto p : cn->rect)
                     log << "," << p;
                 log << endl;
-            } else
+            } else {
                 toVisit.push(cn);
+            }
         }
     }
     log.close();
@@ -111,7 +112,7 @@ void KDBTree::bulkload(string filename, long limit) {
     } else
         cerr << "Data file " << filename << " not found!";
 
-    cerr << "Initiate leaf fission" << endl;
+    cout << "Initiate leaf fission" << endl;
     root->points = Points;
     root->childNodes = vector<SuperNode *>();
     root->splits = vector<Split *>();
@@ -120,7 +121,7 @@ void KDBTree::bulkload(string filename, long limit) {
     root->points->clear();
     root->points.reset();
 
-    cerr << "Initiate branch fission" << endl;
+    cout << "Initiate branch fission" << endl;
     while (root->childNodes->size() > branchCap) {
         branchFission(root);
         root->height++;
@@ -141,21 +142,24 @@ void KDBTree::insertPoint(SuperNode *pn, SuperNode *node, array<float, 2> p) {
         if (node->childNodes->size() > branchCap)
             newNodes = node->splitBranch(pn);
     }
-    if (node == root) {
-        root->childNodes->clear(); // When this is root.
-        root->height++;
-    } else
-        pn->childNodes->erase(find(all(pn->childNodes.value()), node));
-    for (auto cn : newNodes)
-        pn->childNodes->emplace_back(cn);
+    if (!newNodes.empty()) {
+        if (node == root) {
+            root->childNodes->clear();
+            root->height++;
+        } else {
+            pn->childNodes->erase(find(all(pn->childNodes.value()), node));
+            delete node;
+        }
+        for (auto cn : newNodes)
+            pn->childNodes->emplace_back(cn);
+    }
 }
 
-void KDBTree::insertQuery(array<float, 2> p, map<string, double> &res) {
-    // vector<float> query = {p[0], p[1], p[0], p[1]};
+void KDBTree::insertQuery(array<float, 2> p, map<string, double> &stats) {
     insertPoint(root, root, p);
 }
 
-void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &res) {
+void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &stats) {
     SuperNode *node = root;
     while (node->childNodes) {
         auto cn = node->childNodes->begin();
@@ -169,24 +173,24 @@ void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &res) {
 }
 
 void rangeSearch(SuperNode *node, int &pointCount, array<float, 4> query,
-                 map<string, double> &res) {
+                 map<string, double> &stats) {
     if (node->points) {
-        res["io"]++;
-        high_resolution_clock::time_point startTime = high_resolution_clock::now();
-        pointCount += node->scan(query);
-        res["scan"] +=
-            duration_cast<microseconds>(high_resolution_clock::now() - startTime).count();
+        stats["io"]++;
+        // high_resolution_clock::time_point startTime = high_resolution_clock::now();
+        // pointCount += node->scan(query);
+        /* stats["scanTime"] +=
+            duration_cast<microseconds>(high_resolution_clock::now() - startTime).count(); */
     } else {
         for (auto cn : node->childNodes.value())
             if (cn->overlap(query))
-                rangeSearch(cn, pointCount, query, res);
+                rangeSearch(cn, pointCount, query, stats);
     }
 }
 
-void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &res) {
+void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
     int pointCount = 0;
-    rangeSearch(root, pointCount, query, res);
-    trace(pointCount);
+    rangeSearch(root, pointCount, query, stats);
+    // trace(pointCount);
 }
 
 typedef struct knnPoint {
@@ -202,25 +206,25 @@ typedef struct knnNode {
 } knnNode;
 
 void kNNSearch(SuperNode *node, array<float, 4> query,
-               priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &res) {
+               priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
     auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
     priority_queue<knnNode, vector<knnNode>> unseenNodes;
     unseenNodes.emplace(knnNode{node, node->minSqrDist(query)});
     double dist, minDist;
-    high_resolution_clock::time_point startTime;
+    // high_resolution_clock::time_point startTime;
     while (!unseenNodes.empty()) {
-        startTime = high_resolution_clock::now();
+        // startTime = high_resolution_clock::now();
         node = unseenNodes.top().sn;
         dist = unseenNodes.top().dist;
         unseenNodes.pop();
         minDist = knnPts.top().dist;
-        res["explore"] +=
-            duration_cast<microseconds>(high_resolution_clock::now() - startTime).count();
+        /* stats["explore"] +=
+            duration_cast<microseconds>(high_resolution_clock::now() - startTime).count(); */
         if (dist < minDist) {
             if (node->points) {
-                startTime = high_resolution_clock::now();
+                // startTime = high_resolution_clock::now();
                 for (auto p : node->points.value()) {
                     minDist = knnPts.top().dist;
                     dist = sqrDist(query, p);
@@ -230,15 +234,16 @@ void kNNSearch(SuperNode *node, array<float, 4> query,
                         kPt.dist = dist;
                         knnPts.pop();
                         knnPts.push(kPt);
-                        res["heapAccess"]++;
+                        // stats["heapAccess"]++;
                     }
-                    res["scanCount"]++;
+                    // stats["scanCount"]++;
                 }
-                res["io"]++;
-                res["scan"] +=
+                stats["io"]++;
+                /* stats["scan"] +=
                     duration_cast<microseconds>(high_resolution_clock::now() - startTime).count();
+                 */
             } else {
-                startTime = high_resolution_clock::now();
+                // startTime = high_resolution_clock::now();
                 for (auto cn : node->childNodes.value()) {
                     minDist = knnPts.top().dist;
                     dist = cn->minSqrDist(query);
@@ -249,41 +254,45 @@ void kNNSearch(SuperNode *node, array<float, 4> query,
                         unseenNodes.push(kn);
                     }
                 }
-                res["explore"] +=
+                /* stats["explore"] +=
                     duration_cast<microseconds>(high_resolution_clock::now() - startTime).count();
+                 */
             }
         } else
             break;
     }
 }
 
-void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &res, int k) {
+void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
     SuperNode *foundNode;
     array query{p[0], p[1], p[0], p[1]};
 
     vector<knnPoint> tempPts(k);
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
-    kNNSearch(root, query, knnPts, res);
+    kNNSearch(root, query, knnPts, stats);
 
-    double sqrDist;
+    /* double sqrDist;
     while (!knnPts.empty()) {
         p = knnPts.top().pt;
         sqrDist = knnPts.top().dist;
         knnPts.pop();
         trace(p[0], p[1], sqrDist);
-    }
+    } */
 }
 
-int KDBTree::size() const {
+int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 3 * sizeof(int) + sizeof(SuperNode *) + root->size();
     stack<SuperNode *> toVisit({root});
     SuperNode *branch;
     while (!toVisit.empty()) {
         branch = toVisit.top();
         toVisit.pop();
+        stats["internals"]++;
         for (auto cn : branch->childNodes.value()) {
             if (cn->childNodes)
                 toVisit.push(cn);
+            else
+                stats["buckets"]++;
             totalSize += cn->size();
         }
     }
