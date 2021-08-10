@@ -30,7 +30,6 @@ void printRect(string Rect, array<float, 4> r) {
 KDBTree::KDBTree(int _leafCap, int _branchCap, array<float, 4> _boundary, string type) {
     leafCap = _leafCap;
     branchCap = _branchCap;
-    splitCount = 0;
 
     if (type == "Orient")
         root = new OrientNode();
@@ -97,7 +96,7 @@ void KDBTree::bulkload(string filename, long limit) {
     vector<array<float, 2>> Points;
     Points.reserve(limit);
     if (file.is_open()) {
-        getline(file, line);
+        // getline(file, line);
         while (getline(file, line)) {
             int id;
             float lat, lon;
@@ -281,20 +280,25 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
 }
 
 int KDBTree::size(map<string, double> &stats) const {
-    int totalSize = 3 * sizeof(int) + sizeof(SuperNode *) + root->size();
+    int totalSize = 2 * sizeof(int);
+    int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(SuperNode *);
+    int directorySize = 4 * sizeof(float) + 2 * sizeof(int) + sizeof(SuperNode *);
+    int splitSize = 2 * sizeof(float) + sizeof(bool);
     stack<SuperNode *> toVisit({root});
     SuperNode *branch;
     while (!toVisit.empty()) {
         branch = toVisit.top();
         toVisit.pop();
-        stats["internals"]++;
+        stats["directories"]++;
         for (auto cn : branch->childNodes.value()) {
-            if (cn->childNodes)
+            if (cn->childNodes) {
+                stats["pages"] += cn->childNodes->size();
+                stats["splits"] += cn->splits->size();
                 toVisit.push(cn);
-            else
-                stats["buckets"]++;
-            totalSize += cn->size();
+            }
         }
     }
+    totalSize += pageSize * stats["pages"] + directorySize * stats["directories"] +
+                 splitSize * stats["splits"];
     return totalSize;
 }

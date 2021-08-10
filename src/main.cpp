@@ -28,7 +28,8 @@ void createQuerySet(string fileName, vector<tuple<char, float, float, float>> &q
 
     ifstream file(fileName);
     if (file.is_open()) {
-        while (getline(file, line)) { // Ignore headers
+        // getline(file, line); // Skip the header line
+        while (getline(file, line)) {
             char type;
             float lat, lon, info;
             istringstream buf(line);
@@ -170,8 +171,8 @@ void evaluate(KDBTree *index, vector<tuple<char, float, float, float>> queryArra
     float indexSize = index->size(stats);
     log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
     // index.snapshot();
-    log << "No. of bucket nodes: " << stats["buckets"] << endl;
-    log << "No. of internal nodes: " << stats["internals"] << endl;
+    log << "No. of pages: " << stats["pages"] << endl;
+    log << "No. of directories: " << stats["directories"] << endl;
 
     log.close();
 }
@@ -183,9 +184,11 @@ int main(int argCount, char **args) {
     string queryType = string(args[2]);
     int branchCap = stoi(string(args[3]));
     int leafCap = stoi(string(args[4]));
-    long limit = 9e7;
-    string sign = "-" + to_string(int(limit / 1e7)) + "e" + to_string(int(log10(limit))) + "-" +
-                  to_string(branchCap) + "-" + to_string(leafCap);
+    long insertions = 0;
+    long limit = 1e8 - insertions;
+    /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" + to_string(branchCap) + "-" +
+                  to_string(leafCap); */
+    string sign = "-1e8-" + to_string(branchCap) + "-" + to_string(leafCap);
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
@@ -209,14 +212,14 @@ int main(int argCount, char **args) {
     double hTreeCreationTime =
         duration_cast<microseconds>(high_resolution_clock::now() - start).count();
     log << "KDBTree Creation Time: " << hTreeCreationTime << endl;
-    log << "Branch Capacity: " << branchCap << endl;
-    log << "Leaf Capacity: " << leafCap << endl;
+    log << "Directory Capacity: " << branchCap << endl;
+    log << "Page Capacity: " << leafCap << endl;
     map<string, double> stats;
     float indexSize = index.size(stats);
     log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
     // index.snapshot();
-    log << "No. of bucket nodes: " << stats["buckets"] << endl;
-    log << "No. of internal nodes: " << stats["internals"] << endl;
+    log << "No. of pages: " << stats["pages"] << endl;
+    log << "No. of directories: " << stats["directories"] << endl;
 
     vector<tuple<char, float, float, float>> queryArray;
     createQuerySet(queryFile, queryArray);

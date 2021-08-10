@@ -11,7 +11,6 @@ class KDBTree {
 public:
     int branchCap;
     int leafCap;
-    int splitCount;
     SuperNode *root;
 
     KDBTree(int, int, array<float, 4>, string);
