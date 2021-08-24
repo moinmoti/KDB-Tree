@@ -185,10 +185,10 @@ int main(int argCount, char **args) {
     int branchCap = stoi(string(args[3]));
     int leafCap = stoi(string(args[4]));
     long insertions = 0;
-    long limit = 1e8 - insertions;
+    long limit = 1e6 - insertions;
     /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" + to_string(branchCap) + "-" +
                   to_string(leafCap); */
-    string sign = "-1e8-" + to_string(branchCap) + "-" + to_string(leafCap);
+    string sign = "-2e6-" + to_string(branchCap) + "-" + to_string(leafCap);
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
@@ -224,7 +224,7 @@ int main(int argCount, char **args) {
     vector<tuple<char, float, float, float>> queryArray;
     createQuerySet(queryFile, queryArray);
 
-    cerr << "---Evaluation--- " << endl;
+    cout << "---Evaluation--- " << endl;
     evaluate(&index, queryArray, boundary, logFile);
     return 0;
 }

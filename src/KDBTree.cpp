@@ -176,7 +176,7 @@ void rangeSearch(SuperNode *node, int &pointCount, array<float, 4> query,
     if (node->points) {
         stats["io"]++;
         // high_resolution_clock::time_point startTime = high_resolution_clock::now();
-        // pointCount += node->scan(query);
+        pointCount += node->scan(query);
         /* stats["scanTime"] +=
             duration_cast<microseconds>(high_resolution_clock::now() - startTime).count(); */
     } else {
@@ -189,7 +189,7 @@ void rangeSearch(SuperNode *node, int &pointCount, array<float, 4> query,
 void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
     int pointCount = 0;
     rangeSearch(root, pointCount, query, stats);
-    // trace(pointCount);
+    trace(pointCount);
 }
 
 typedef struct knnPoint {
@@ -270,13 +270,13 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
     kNNSearch(root, query, knnPts, stats);
 
-    /* double sqrDist;
+    double sqrDist;
     while (!knnPts.empty()) {
         p = knnPts.top().pt;
         sqrDist = knnPts.top().dist;
         knnPts.pop();
         trace(p[0], p[1], sqrDist);
-    } */
+    }
 }
 
 int KDBTree::size(map<string, double> &stats) const {
