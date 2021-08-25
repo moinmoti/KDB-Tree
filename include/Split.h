@@ -1,8 +1,9 @@
 #pragma once
 
-#include <bits/stdc++.h>
+// #include <bits/stdc++.h>
+#include <array>
 
 struct Split {
-    std::array<float, 2> pt;
+    float pt;
     bool axis;
 };

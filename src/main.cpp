@@ -1,25 +1,7 @@
 #include "KDBTree.h"
-#include <bits/stdc++.h>
-#include <chrono>
+#include "common.h"
 
-using namespace std;
 using namespace std::chrono;
-
-#define TRACE
-#ifdef TRACE
-#define trace(...) __f(#__VA_ARGS__, __VA_ARGS__)
-template <typename Arg1> void __f(const char *name, Arg1 &&arg1) {
-    cerr << name << " : " << arg1 << endl;
-}
-template <typename Arg1, typename... Args>
-void __f(const char *names, Arg1 &&arg1, Args &&... args) {
-    const char *comma = strchr(names + 1, ',');
-    cerr.write(names, comma - names) << " : " << arg1 << " | ";
-    __f(comma + 1, args...);
-}
-#else
-#define trace(...)
-#endif
 
 void createQuerySet(string fileName, vector<tuple<char, float, float, float>> &queryArray) {
     cout << "Begin query creation for LSI" << endl;
@@ -182,20 +164,20 @@ int main(int argCount, char **args) {
     map<string, string> config;
     string projectPath = string(args[1]);
     string queryType = string(args[2]);
-    int branchCap = stoi(string(args[3]));
-    int leafCap = stoi(string(args[4]));
+    int fanout = stoi(string(args[3]));
+    int pageCap = stoi(string(args[4]));
     long insertions = 0;
     long limit = 1e7 - insertions;
-    /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" + to_string(branchCap) + "-" +
-                  to_string(leafCap); */
-    string splitType = "Spread";
-    string sign = "-" + splitType + "-1e7-" + to_string(branchCap) + "-" + to_string(leafCap);
+    /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" +
+       to_string(fanout) + "-" + to_string(pageCap); */
+    string splitType = (TYPE) ? "Spread" : "Cyclic";
+    string sign = "-" + splitType + "-1e7-" + to_string(fanout) + "-" + to_string(pageCap);
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
     string queryFile = projectPath + "/data/ships-dinos/Queries/" + queryType;
     string dataFile = projectPath + "/data/ships-dinos/ships1e8.txt";
-    // vector<int> branchCap = {5, 10, 15, 20, 25, 50, 100, 150, 200};
+    // vector<int> fanout = {5, 10, 15, 20, 25, 50, 100, 150, 200};
     int offset = 0;
     array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
 
@@ -207,18 +189,18 @@ int main(int argCount, char **args) {
         cout << "Unable to open log.txt";
     high_resolution_clock::time_point start = high_resolution_clock::now();
     cout << "Defining KDBTree..." << endl;
-    KDBTree index = KDBTree(leafCap, branchCap, boundary, splitType);
+    KDBTree index = KDBTree(pageCap, fanout, boundary, splitType);
     cout << "Bulkloading KDBTree..." << endl;
     index.bulkload(dataFile, limit);
     double hTreeCreationTime =
         duration_cast<microseconds>(high_resolution_clock::now() - start).count();
     log << "KDBTree Creation Time: " << hTreeCreationTime << endl;
-    log << "Directory Capacity: " << branchCap << endl;
-    log << "Page Capacity: " << leafCap << endl;
+    log << "Directory Capacity: " << fanout << endl;
+    log << "Page Capacity: " << pageCap << endl;
     map<string, double> stats;
     float indexSize = index.size(stats);
     log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-    index.snapshot(splitType);
+    index.snapshot();
     log << "No. of pages: " << stats["pages"] << endl;
     log << "No. of directories: " << stats["directories"] << endl;
 

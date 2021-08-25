@@ -10,9 +10,6 @@ set(CMAKE_CXX_FLAGS "-O2")
 add_executable(KDBTree
         src/main.cpp
         src/KDBTree.cpp
-        src/SuperNode.cpp
-        src/OrientSplit.cpp
-        src/SpreadSplit.cpp
-        src/KDBSplit.cpp)
+        src/Node.cpp)
 
 target_include_directories(KDBTree PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
