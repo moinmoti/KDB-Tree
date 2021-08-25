@@ -16,7 +16,7 @@ public:
     KDBTree(int, int, array<float, 4>, string);
     ~KDBTree();
 
-    void snapshot() const;
+    void snapshot(string) const;
     void load(string, long);
     void leafFission(SuperNode *);
     void branchFission(SuperNode *);

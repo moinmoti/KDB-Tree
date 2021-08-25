@@ -1,5 +1,7 @@
 #include "KDBTree.h"
+#include "KDBSplit.h"
 #include "OrientSplit.h"
+#include "SpreadSplit.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -33,16 +35,21 @@ KDBTree::KDBTree(int _leafCap, int _branchCap, array<float, 4> _boundary, string
 
     if (type == "Orient")
         root = new OrientNode();
+    else if (type == "Spread")
+        root = new SpreadNode();
+    else if (type == "KDB")
+        root = new KDBNode();
     else
         cerr << "Invalid Partition Scheme" << endl;
     root->rect = _boundary;
     root->height = 0;
+    root->splitDim = 1;
 }
 
 KDBTree::~KDBTree() {}
 
-void KDBTree::snapshot() const {
-    ofstream log("KDBTree.csv");
+void KDBTree::snapshot(string splitType) const {
+    ofstream log(splitType + "-KDBTree.csv");
     stack<SuperNode *> toVisit({root});
     SuperNode *branch;
     while (!toVisit.empty()) {
@@ -101,7 +108,7 @@ void KDBTree::bulkload(string filename, long limit) {
             int id;
             float lat, lon;
             istringstream buf(line);
-            buf >> id >> lat >> lon;
+            buf >> id >> lon >> lat;
             array pt{lon, lat};
             Points.emplace_back(pt);
             if (++i >= limit)

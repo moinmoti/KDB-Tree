@@ -1,12 +1,12 @@
-import random as r
-
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-import numpy as np
+import sys
+from pathlib import Path
 
 height = 0
 nodes = []
-with open("KDBTree.csv") as f:
+filename = sys.argv[1]
+with open(filename) as f:
     for i, line in enumerate(f):
         if int(line.split(",")[0]) == height:
             nodes.append(
@@ -54,4 +54,4 @@ for l in nodes:
 # for model in points:
 #   ax.scatter([x[0] for x in points[model]], [y[1] for y in points[model]], color=(r.uniform(0,1),r.uniform(0,1),r.uniform(0,1)), alpha = 1, s = 0.5)
 
-plt.savefig("Snapshots/KDBTree-" + str(height) + ".png")
+plt.savefig("Snapshots/" + Path(filename).stem + "-" + str(height) + ".png")

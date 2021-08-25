@@ -11,6 +11,7 @@ class SuperNode {
 
 public:
     int height;
+    bool splitDim;
     array<float, 4> rect; // xlow, ylow, xhigh, yhigh
 
     // Branch node specific members
@@ -34,6 +35,7 @@ public:
 
     // Common supernode methods
     void createRect(array<float, 4>, Split *, int);
+    array<float, 2> getMedian() const;
     int size() const;
     //void mergeNode(int, SuperNode*);
     //int deleteNode(SuperNode*);

@@ -25,22 +25,13 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 #define V 0
 #define H 1
 
-array<float, 2> getMedian(vector<array<float, 2>> pts) {
-    if (pts.size() % 2)
-        return pts[pts.size() / 2];
-    array<float, 2> l, r;
-    l = pts[pts.size() / 2 - 1];
-    r = pts[pts.size() / 2];
-    return array{(l[0] + r[0]) / 2, (l[1] + r[1]) / 2};
-}
-
 vector<SuperNode *> OrientNode::splitLeaf(SuperNode *pn, Split *newSplit, vector<SuperNode *> sns) {
     sns = {new OrientNode(), new OrientNode()};
 
     bool axis = (rect[2] - rect[0]) < (rect[3] - rect[1]);
     sort(all(points.value()),
          [axis](const array<float, 2> &l, const array<float, 2> &r) { return l[axis] < r[axis]; });
-    array median = getMedian(points.value());
+    array median = getMedian();
 
     newSplit = new Split();
     newSplit->axis = axis;

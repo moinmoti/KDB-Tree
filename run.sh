@@ -1,5 +1,5 @@
 #rm -rf Experiments/*
-QF="qI1mil"
+QF="qI0"
 #QF="knnTestQueries.txt"
 mkdir -p Experiments/$QF
 #cmake -G "Unix Makefiles" .

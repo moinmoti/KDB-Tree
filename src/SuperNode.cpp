@@ -152,6 +152,15 @@ void SuperNode::createRect(array<float, 4> r, Split *_split, int side) {
     rect[_split->axis + !side * NUMDIMS] = _split->pt[_split->axis];
 }
 
+array<float, 2> SuperNode::getMedian() const {
+    if (points->size() % 2)
+        return points.value()[points->size() / 2];
+    array<float, 2> l, r;
+    l = points.value()[points->size() / 2 - 1];
+    r = points.value()[points->size() / 2];
+    return array{(l[0] + r[0]) / 2, (l[1] + r[1]) / 2};
+}
+
 // void SuperNode::mergeNode(int mergeDir, SuperNode *expiredNode) {
 // for (int dir = 0; dir < neighbors.size(); dir++) {
 // int oppDir = (dir + NUMDIMS) % (NUMDIMS*2);

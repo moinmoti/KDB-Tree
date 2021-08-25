@@ -170,7 +170,7 @@ void evaluate(KDBTree *index, vector<tuple<char, float, float, float>> queryArra
     map<string, double> stats;
     float indexSize = index->size(stats);
     log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-    // index.snapshot();
+    // index->snapshot();
     log << "No. of pages: " << stats["pages"] << endl;
     log << "No. of directories: " << stats["directories"] << endl;
 
@@ -185,10 +185,11 @@ int main(int argCount, char **args) {
     int branchCap = stoi(string(args[3]));
     int leafCap = stoi(string(args[4]));
     long insertions = 0;
-    long limit = 1e6 - insertions;
+    long limit = 1e7 - insertions;
     /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" + to_string(branchCap) + "-" +
                   to_string(leafCap); */
-    string sign = "-2e6-" + to_string(branchCap) + "-" + to_string(leafCap);
+    string splitType = "Spread";
+    string sign = "-" + splitType + "-1e7-" + to_string(branchCap) + "-" + to_string(leafCap);
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
@@ -206,7 +207,7 @@ int main(int argCount, char **args) {
         cout << "Unable to open log.txt";
     high_resolution_clock::time_point start = high_resolution_clock::now();
     cout << "Defining KDBTree..." << endl;
-    KDBTree index = KDBTree(leafCap, branchCap, boundary, "Orient");
+    KDBTree index = KDBTree(leafCap, branchCap, boundary, splitType);
     cout << "Bulkloading KDBTree..." << endl;
     index.bulkload(dataFile, limit);
     double hTreeCreationTime =
@@ -217,14 +218,14 @@ int main(int argCount, char **args) {
     map<string, double> stats;
     float indexSize = index.size(stats);
     log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-    // index.snapshot();
+    index.snapshot(splitType);
     log << "No. of pages: " << stats["pages"] << endl;
     log << "No. of directories: " << stats["directories"] << endl;
 
     vector<tuple<char, float, float, float>> queryArray;
     createQuerySet(queryFile, queryArray);
 
-    cout << "---Evaluation--- " << endl;
-    evaluate(&index, queryArray, boundary, logFile);
+    /* cout << "---Evaluation--- " << endl;
+    evaluate(&index, queryArray, boundary, logFile); */
     return 0;
 }
