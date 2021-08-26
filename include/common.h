@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <math.h>
@@ -12,6 +14,7 @@
 #include <vector>
 #include <sstream>
 #include <stack>
+#include <string.h>
 
 using namespace std;
 
@@ -24,7 +27,7 @@ template <typename Arg1> void __f(const char *name, Arg1 &&arg1) {
 template <typename Arg1, typename... Args>
 void __f(const char *names, Arg1 &&arg1, Args &&... args) {
     const char *comma = strchr(names + 1, ',');
-    cerr.write(names, comma - names) << " : " << arg1 << " | ";
+    cerr.write(names, comma - names) << " : " << setw(9) << arg1 << " | ";
     __f(comma + 1, args...);
 }
 #else
@@ -45,4 +48,5 @@ constexpr uint oppDir(uint d) {return (d + D) % (D * 2);};
 constexpr uint CYCLIC = 0;
 constexpr uint SPREAD = 1;
 // constexpr uint ORIENT = 2;
+// constexpr uint TYPE = SPREAD;
 constexpr uint TYPE = CYCLIC;

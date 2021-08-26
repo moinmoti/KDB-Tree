@@ -142,13 +142,12 @@ vector<Node *> Node::splitDirectory(Split *split) {
         dirs[i]->rect = rect;
         dirs[i]->rect[split->axis + !i * D] = split->pt;
         dirs[i]->contents = vector<Node *>();
-        dirs[i]->contents->reserve(contents->size());
         dirs[i]->splitDim = split->axis;
     }
     for (auto cn : contents.value()) {
         if (cn->rect[split->axis + D] <= split->pt)
             dirs[0]->contents->emplace_back(cn);
-        if (cn->rect[split->axis] >= split->pt)
+        else if (cn->rect[split->axis] >= split->pt)
             dirs[1]->contents->emplace_back(cn);
         else {
             vector<Node *> newNodes;

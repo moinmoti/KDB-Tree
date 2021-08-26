@@ -139,12 +139,7 @@ void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &stats) {
 void rangeSearch(Node *node, int &pointCount, array<float, 4> query, map<string, double> &stats) {
     if (node->points) {
         stats["io"]++;
-        // high_resolution_clock::time_point startTime =
-        // high_resolution_clock::now();
-        pointCount += node->scan(query);
-        /* stats["scanTime"] +=
-            duration_cast<microseconds>(high_resolution_clock::now() -
-           startTime).count(); */
+        // pointCount += node->scan(query);
     } else {
         for (auto cn : node->contents.value())
             if (cn->overlap(query))
@@ -155,7 +150,7 @@ void rangeSearch(Node *node, int &pointCount, array<float, 4> query, map<string,
 void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
     int pointCount = 0;
     rangeSearch(root, pointCount, query, stats);
-    trace(pointCount);
+    // trace(pointCount);
 }
 
 typedef struct knnPoint {
@@ -178,19 +173,13 @@ void kNNSearch(Node *node, array<float, 4> query,
     priority_queue<knnNode, vector<knnNode>> unseenNodes;
     unseenNodes.emplace(knnNode{node, node->minSqrDist(query)});
     double dist, minDist;
-    // high_resolution_clock::time_point startTime;
     while (!unseenNodes.empty()) {
-        // startTime = high_resolution_clock::now();
         node = unseenNodes.top().sn;
         dist = unseenNodes.top().dist;
         unseenNodes.pop();
         minDist = knnPts.top().dist;
-        /* stats["explore"] +=
-            duration_cast<microseconds>(high_resolution_clock::now() -
-           startTime).count(); */
         if (dist < minDist) {
             if (node->points) {
-                // startTime = high_resolution_clock::now();
                 for (auto p : node->points.value()) {
                     minDist = knnPts.top().dist;
                     dist = sqrDist(query, p);
@@ -200,19 +189,12 @@ void kNNSearch(Node *node, array<float, 4> query,
                         kPt.dist = dist;
                         knnPts.pop();
                         knnPts.push(kPt);
-                        // stats["heapAccess"]++;
                     }
-                    // stats["scanCount"]++;
                 }
                 stats["io"]++;
-                /* stats["scan"] +=
-                    duration_cast<microseconds>(high_resolution_clock::now() -
-                   startTime).count();
-                 */
             } else {
-                // startTime = high_resolution_clock::now();
+                minDist = knnPts.top().dist;
                 for (auto cn : node->contents.value()) {
-                    minDist = knnPts.top().dist;
                     dist = cn->minSqrDist(query);
                     if (dist < minDist) {
                         knnNode kn;
@@ -221,10 +203,6 @@ void kNNSearch(Node *node, array<float, 4> query,
                         unseenNodes.push(kn);
                     }
                 }
-                /* stats["explore"] +=
-                    duration_cast<microseconds>(high_resolution_clock::now() -
-                   startTime).count();
-                 */
             }
         } else
             break;
@@ -239,13 +217,13 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
     kNNSearch(root, query, knnPts, stats);
 
-    double sqrDist;
+    /* double sqrDist;
     while (!knnPts.empty()) {
         p = knnPts.top().pt;
         sqrDist = knnPts.top().dist;
         knnPts.pop();
         trace(p[0], p[1], sqrDist);
-    }
+    } */
 }
 
 int KDBTree::size(map<string, double> &stats) const {
