@@ -43,13 +43,24 @@ void KDBTree::snapshot() const {
 }
 
 void KDBTree::fission(Node *node) {
-    vector<Node *> pages = node->splitPage();
-    for (auto page : pages) {
-        if (page->points->size() > pageCap) {
-            fission(page);
-            delete page;
-        } else
-            root->contents->emplace_back(page);
+    node->height = log(node->points->size()) / log(pageCap);
+    uint N = ceil(node->points->size() / 2);
+    node->contents = node->splitPage();
+    node->points->clear();
+    node->points.reset();
+    for (; N > pageCap && node->contents->size() <= fanout / 2; N = ceil(N / 2)) {
+        vector<Node *> newPages;
+        for (auto cn : node->contents.value()) {
+            vector<Node *> pages = cn->splitPage();
+            for (auto page : pages)
+                newPages.emplace_back(page);
+            delete cn;
+        }
+        node->contents = newPages;
+    }
+    if (N > pageCap) {
+        for (auto cn : node->contents.value())
+            fission(cn);
     }
 }
 
@@ -76,18 +87,9 @@ void KDBTree::bulkload(string filename, long limit) {
     } else
         cerr << "Data file " << filename << " not found!";
 
-    cout << "Initiate page fission" << endl;
+    cout << "Initiate fission" << endl;
     root->points = Points;
-    root->contents = vector<Node *>();
     fission(root);
-    root->height = 1;
-    root->points->clear();
-    root->points.reset();
-
-    cout << "Initiate dir fission" << endl;
-    while (root->contents->size() > fanout) {
-        root->height++;
-    }
 }
 
 void KDBTree::insertPoint(Node *pn, Node *node, array<float, 2> p) {
