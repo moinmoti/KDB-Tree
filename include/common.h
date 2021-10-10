@@ -49,4 +49,4 @@ constexpr uint CYCLIC = 0;
 constexpr uint SPREAD = 1;
 // constexpr uint ORIENT = 2;
 // constexpr uint TYPE = SPREAD;
-constexpr uint TYPE = CYCLIC;
+constexpr uint TYPE = SPREAD;

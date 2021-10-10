@@ -229,7 +229,7 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
 int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 2 * sizeof(int);
     int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(Node *);
-    int directorySize = 4 * sizeof(float) + 2 * sizeof(int) + sizeof(Node *);
+    int directorySize = 4 * sizeof(float) + sizeof(int) + sizeof(Node *);
     stack<Node *> toVisit({root});
     Node *dir;
     while (!toVisit.empty()) {
@@ -238,9 +238,9 @@ int KDBTree::size(map<string, double> &stats) const {
         stats["directories"]++;
         for (auto cn : dir->contents.value()) {
             if (cn->contents) {
-                stats["pages"] += cn->contents->size();
                 toVisit.push(cn);
-            }
+            } else
+                stats["pages"]++;
         }
     }
     totalSize += pageSize * stats["pages"] + directorySize * stats["directories"];

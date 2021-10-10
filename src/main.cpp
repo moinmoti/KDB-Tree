@@ -6,7 +6,6 @@ using namespace std::chrono;
 void createQuerySet(string fileName, vector<tuple<char, vector<float>, float>> &queryArray) {
     cout << "Begin query creation" << endl;
     string line;
-    int i = 0;
 
     ifstream file(fileName);
     if (file.is_open()) {
@@ -14,17 +13,20 @@ void createQuerySet(string fileName, vector<tuple<char, vector<float>, float>> &
         while (getline(file, line)) {
             char type = line[line.find_first_not_of(" ")];
             vector<float> q;
-            line = line.substr(line.find_first_of(type) + 1);
-            const char *cs = line.c_str();
-            char *end;
-            int params = (type == 'r') ? 4 : 2;
-            for (uint d = 0; d < params; d++) {
-                q.emplace_back(strtof(cs, &end));
-                cs = end;
+            if (type == 'l') {
+                queryArray.emplace_back(make_tuple(type, q, 0));
+            } else {
+                line = line.substr(line.find_first_of(type) + 1);
+                const char *cs = line.c_str();
+                char *end;
+                int params = (type == 'r') ? 4 : 2;
+                for (uint d = 0; d < params; d++) {
+                    q.emplace_back(strtof(cs, &end));
+                    cs = end;
+                }
+                float info = strtof(cs, &end);
+                queryArray.emplace_back(make_tuple(type, q, info));
             }
-            float info = strtof(cs, &end);
-            queryArray.emplace_back(make_tuple(type, q, info));
-            i++;
         }
         file.close();
     }
@@ -120,44 +122,53 @@ void evaluate(KDBTree *index, vector<tuple<char, vector<float>, float>> queryArr
             deleteQuery(q, index, deleteLog);
             deleteLog["count"]++;
             // trace(deleteLog["count"]);
+        } else if (get<0>(q) == 'l') {
+            ofstream log;
+            log.open(logFile, ios_base::app);
+            if (!log.is_open())
+                cerr << "Unable to open log.txt";
+
+            log << "------------------Results-------------------" << endl;
+
+            log << "------------------Range Queries-------------------" << endl;
+            for (auto &l : rangeLog) {
+                log << l.first << ": " << l.second << endl;
+                l.second = 0;
+            }
+
+            log << "------------------KNN Queries-------------------" << endl;
+            for (auto &l : knnLog) {
+                log << l.first << ": " << l.second << endl;
+                l.second = 0;
+            }
+
+            /* log << "------------------Delete Queries-------------------" << endl;
+            for (auto &l : deleteLog) {
+                log << l.first << ": " << l.second << endl;
+                l.second = 0;
+            } */
+
+            log << "------------------Insert Queries-------------------" << endl;
+            for (auto &l : insertLog) {
+                log << l.first << ": " << l.second << endl;
+                l.second = 0;
+            }
+
+            map<string, double> stats;
+            float indexSize = index->size(stats);
+            log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
+            // index->snapshot();
+            log << "No. of pages: " << stats["pages"] << endl;
+            log << "No. of directories: " << stats["directories"] << endl;
+
+            log << endl << "************************************************" << endl;
+
+            log.close();
         } else
             cerr << "Invalid Query!!!" << endl;
         // cerr << endl;
     }
     cout << "Finish Querying..." << endl;
-
-    ofstream log;
-    log.open(logFile, ios_base::app);
-    if (!log.is_open())
-        cerr << "Unable to open log.txt";
-
-    log << "------------------Results-------------------" << endl;
-
-    log << "------------------Range Queries-------------------" << endl;
-    for (auto it = rangeLog.cbegin(); it != rangeLog.cend(); ++it)
-        log << it->first << ": " << it->second << endl;
-
-    log << "------------------KNN Queries-------------------" << endl;
-    for (auto it = knnLog.cbegin(); it != knnLog.cend(); ++it)
-        log << it->first << ": " << it->second << endl;
-
-    log << "------------------Insert Queries-------------------" << endl;
-    for (auto it = insertLog.cbegin(); it != insertLog.cend(); ++it)
-        log << it->first << ": " << it->second << endl;
-
-    log << "------------------Delete Queries-------------------" << endl;
-    for (auto it = deleteLog.cbegin(); it != deleteLog.cend(); ++it)
-        log << it->first << ": " << it->second << endl;
-
-    log << endl << "************************************************" << endl;
-    map<string, double> stats;
-    float indexSize = index->size(stats);
-    log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-    // index->snapshot();
-    log << "No. of pages: " << stats["pages"] << endl;
-    log << "No. of directories: " << stats["directories"] << endl;
-
-    log.close();
 }
 
 // main with arguments to be called by python wrapper
@@ -167,17 +178,21 @@ int main(int argCount, char **args) {
     string queryType = string(args[2]);
     int fanout = stoi(string(args[3]));
     int pageCap = stoi(string(args[4]));
-    long insertions = 1e7;
-    long limit = 1e8 - insertions;
+    long insertions = 0;
+    long limit = 1e7 - insertions;
     /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" +
        to_string(fanout) + "-" + to_string(pageCap); */
     string splitType = (TYPE) ? "Spread" : "Cyclic";
-    string sign = "-" + splitType + "-1e8-" + to_string(fanout) + "-" + to_string(pageCap);
+    string sign = "-" + splitType + "-1e7-" + to_string(fanout);
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
-    string queryFile = projectPath + "/data/ships-dinos/Queries/" + queryType;
-    string dataFile = projectPath + "/data/ships-dinos/ships1e8.txt";
+    /* string queryFile = projectPath + "/data/ships-dinos/Queries/" + queryType;
+    string dataFile = projectPath + "/data/ships-dinos/ships1e8.txt"; */
+    /* string queryFile = projectPath + "/data/NewYorkTaxi/" + queryType;
+    string dataFile = projectPath + "/data/NewYorkTaxi/taxiNY"; */
+    string queryFile = projectPath + "/data/OSM-USA/" + queryType;
+    string dataFile = projectPath + "/data/OSM-USA/osm-usa-10mil";
     // vector<int> fanout = {5, 10, 15, 20, 25, 50, 100, 150, 200};
     int offset = 0;
     array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
