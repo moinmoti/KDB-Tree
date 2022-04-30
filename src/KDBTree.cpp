@@ -10,8 +10,17 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, string ty
 
     root = new Node();
     root->rect = _boundary;
-    root->height = 0;
+    root->height = 1;
     root->splitDim = 1;
+    root->contents = vector<Node *>();
+
+    Node *firstPage = new Node();
+    firstPage->rect = root->rect;
+    firstPage->height = 0;
+    firstPage->splitDim = 1;
+    firstPage->points = vector<Record>();
+
+    root->contents->emplace_back(firstPage);
 }
 
 KDBTree::~KDBTree() {}
@@ -69,7 +78,7 @@ void KDBTree::bulkload(string filename, long limit) {
     ifstream file(filename);
 
     int i = 0;
-    vector<array<float, 2>> Points;
+    vector<Record> Points;
     Points.reserve(limit);
     if (file.is_open()) {
         // getline(file, line);
@@ -79,7 +88,7 @@ void KDBTree::bulkload(string filename, long limit) {
             istringstream buf(line);
             buf >> id >> lon >> lat;
             array pt{lon, lat};
-            Points.emplace_back(pt);
+            Points.emplace_back(Record{.id = id, .data = pt});
             if (++i >= limit)
                 break;
         }
@@ -87,24 +96,33 @@ void KDBTree::bulkload(string filename, long limit) {
     } else
         cerr << "Data file " << filename << " not found!";
 
-    cout << "Initiate fission" << endl;
+    // Delete the first page.
+    delete root->contents->front();
+    root->contents->clear();
+    root->contents.reset();
+
     root->points = Points;
+    cout << "Initiate fission" << endl;
     fission(root);
 }
 
-void KDBTree::insertPoint(Node *pn, Node *node, array<float, 2> p) {
+int KDBTree::insertPoint(Node *pn, Node *node, Record p) {
     vector<Node *> newNodes;
+    int writes;
     if (node->points) {
         node->points->emplace_back(p);
-        if (node->points->size() > pageCap)
+        writes = 2;
+        if (node->points->size() > pageCap) {
             newNodes = node->splitPage();
+            writes = 3;
+        }
     } else {
         auto cn = node->contents->begin();
-        while (!(*cn)->containsPt(p))
+        while (!(*cn)->containsPt(p.data))
             cn++;
-        insertPoint(node, *cn, p);
+        writes = insertPoint(node, *cn, p);
         if (node->contents->size() > fanout)
-            newNodes = node->splitDirectory();
+            newNodes = node->splitDirectory(writes);
     }
     if (!newNodes.empty()) {
         if (node == root) {
@@ -117,23 +135,24 @@ void KDBTree::insertPoint(Node *pn, Node *node, array<float, 2> p) {
         for (auto cn : newNodes)
             pn->contents->emplace_back(cn);
     }
+    return writes;
 }
 
-void KDBTree::insertQuery(array<float, 2> p, map<string, double> &stats) {
-    insertPoint(root, root, p);
+void KDBTree::insertQuery(Record p, map<string, double> &stats) {
+    stats["io"] = insertPoint(root, root, p);
 }
 
-void KDBTree::deleteQuery(array<float, 2> p, map<string, double> &stats) {
+void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
     Node *node = root;
     while (node->contents) {
         auto cn = node->contents->begin();
-        while (!(*cn)->containsPt(p))
+        while (!(*cn)->containsPt(p.data))
             cn++;
         node = *cn;
     }
-    auto pt = find(all(node->points.value()), p);
+    /* auto pt = find(all(node->points.value()), p);
     if (pt != node->points->end())
-        node->points->erase(pt);
+        node->points->erase(pt); */
 }
 
 void rangeSearch(Node *node, int &pointCount, array<float, 4> query, map<string, double> &stats) {
@@ -154,7 +173,7 @@ void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
 }
 
 typedef struct knnPoint {
-    array<float, 2> pt;
+    Record pt;
     double dist = numeric_limits<double>::max();
     bool operator<(const knnPoint &second) const { return dist < second.dist; }
 } knnPoint;
@@ -166,7 +185,7 @@ typedef struct knnNode {
 } knnNode;
 
 void kNNSearch(Node *node, array<float, 4> query,
-               priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
+    priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
     auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
@@ -182,7 +201,7 @@ void kNNSearch(Node *node, array<float, 4> query,
             if (node->points) {
                 for (auto p : node->points.value()) {
                     minDist = knnPts.top().dist;
-                    dist = sqrDist(query, p);
+                    dist = sqrDist(query, p.data);
                     if (dist < minDist) {
                         knnPoint kPt;
                         kPt.pt = p;
@@ -218,11 +237,13 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
     kNNSearch(root, query, knnPts, stats);
 
     /* double sqrDist;
-    while (!knnPts.empty()) {
-        p = knnPts.top().pt;
-        sqrDist = knnPts.top().dist;
-        knnPts.pop();
-        trace(p[0], p[1], sqrDist);
+    if (k == 32) {
+        while (!knnPts.empty()) {
+            Record pt = knnPts.top().pt;
+            sqrDist = knnPts.top().dist;
+            knnPts.pop();
+            trace(pt.id);
+        }
     } */
 }
 

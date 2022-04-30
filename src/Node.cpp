@@ -71,13 +71,13 @@ double Node::minSqrDist(array<float, 4> r) const {
 // Node Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
-vector<array<float, 2>> Node::getPoints() const {
-    vector<array<float, 2>> allPoints;
+vector<Record> Node::getPoints() const {
+    vector<Record> allPoints;
     if (points)
         allPoints = points.value();
     else {
         for (auto cn : contents.value()) {
-            vector<array<float, 2>> tempPoints = cn->getPoints();
+            vector<Record> tempPoints = cn->getPoints();
             allPoints.insert(allPoints.end(), all(tempPoints));
         }
     }
@@ -86,29 +86,29 @@ vector<array<float, 2>> Node::getPoints() const {
 
 Split *Node::getSplit() const {
     bool axis;
-    vector<array<float, 2>> allPoints = getPoints();
+    vector<Record> allPoints = getPoints();
     if (TYPE == CYCLIC) {
         axis = !splitDim;
     } else if (TYPE == SPREAD) {
         array<float, 2> low({180, 90}), high({-180, -90});
         for (auto p : allPoints) {
-            if (p[0] < low[0])
-                low[0] = p[0];
-            if (p[1] < low[1])
-                low[1] = p[1];
-            if (p[0] > high[0])
-                high[0] = p[0];
-            if (p[1] > high[1])
-                high[1] = p[1];
+            if (p.data[0] < low[0])
+                low[0] = p.data[0];
+            if (p.data[1] < low[1])
+                low[1] = p.data[1];
+            if (p.data[0] > high[0])
+                high[0] = p.data[0];
+            if (p.data[1] > high[1])
+                high[1] = p.data[1];
         }
         axis = (high[0] - low[0]) < (high[1] - low[1]);
     } else
         cerr << "Error: Invalid TYPE!!!" << endl;
     sort(all(allPoints),
-         [axis](const array<float, 2> &l, const array<float, 2> &r) { return l[axis] < r[axis]; });
+        [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
     Split *split = new Split();
     split->axis = axis;
-    split->pt = allPoints[allPoints.size() / 2][axis];
+    split->pt = allPoints[allPoints.size() / 2].data[axis];
     return split;
 }
 
@@ -117,7 +117,7 @@ int Node::scan(array<float, 4> query) const {
     if (inside(query))
         return points->size();
     for (auto p : points.value())
-        if (overlaps(query, p))
+        if (overlaps(query, p.data))
             totalPoints++;
     return totalPoints;
 }
@@ -133,7 +133,7 @@ int Node::size() const {
     return totalSize;
 }
 
-vector<Node *> Node::splitDirectory(Split *split) {
+vector<Node *> Node::splitDirectory(int &writes, Split *split) {
     vector<Node *> dirs = {new Node(), new Node()};
     if (split == NULL)
         split = getSplit();
@@ -151,10 +151,11 @@ vector<Node *> Node::splitDirectory(Split *split) {
             dirs[1]->contents->emplace_back(cn);
         else {
             vector<Node *> newNodes;
-            if (cn->points)
+            if (cn->points) {
                 newNodes = cn->splitPage(split);
-            else
-                newNodes = cn->splitDirectory(split);
+                writes += 3;
+            } else
+                newNodes = cn->splitDirectory(writes, split);
             for (auto node : newNodes)
                 dirs[node->getCenter()[split->axis] > split->pt]->contents->emplace_back(node);
         }
@@ -172,15 +173,15 @@ vector<Node *> Node::splitPage(Split *split) {
         pages[i]->height = 0;
         pages[i]->rect = rect;
         pages[i]->rect[split->axis + !i * D] = split->pt;
-        pages[i]->points = vector<array<float, 2>>();
+        pages[i]->points = vector<Record>();
         pages[i]->splitDim = split->axis;
     }
 
     // Splitting points
     for (auto p : (points).value()) {
-        if (p[split->axis] < split->pt)
+        if (p.data[split->axis] < split->pt)
             pages[0]->points->emplace_back(p);
-        else if (p[split->axis] > split->pt)
+        else if (p.data[split->axis] > split->pt)
             pages[1]->points->emplace_back(p);
         else {
             if (pages[0]->points->size() < pages[1]->points->size())

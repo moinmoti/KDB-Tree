@@ -17,6 +17,7 @@
 #include <string.h>
 
 using namespace std;
+using namespace chrono;
 
 #define TRACE
 #ifdef TRACE
@@ -50,3 +51,8 @@ constexpr uint SPREAD = 1;
 // constexpr uint ORIENT = 2;
 // constexpr uint TYPE = SPREAD;
 constexpr uint TYPE = SPREAD;
+
+struct Record {
+    int id;
+    array<float, 2>  data;
+};
