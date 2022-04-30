@@ -185,7 +185,7 @@ typedef struct knnNode {
 } knnNode;
 
 void kNNSearch(Node *node, array<float, 4> query,
-    priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
+               priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
     auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
@@ -229,7 +229,6 @@ void kNNSearch(Node *node, array<float, 4> query,
 }
 
 void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
-    Node *foundNode;
     array query{p[0], p[1], p[0], p[1]};
 
     vector<knnPoint> tempPts(k);

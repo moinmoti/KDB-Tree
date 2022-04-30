@@ -174,7 +174,6 @@ int main(int argCount, char **args) {
     /* string queryFile = projectPath + "/Data/OSM/Queries/" + queryType + ".txt";
     string dataFile = projectPath + "/Data/OSM/data-7e7.txt"; */
     // vector<int> fanout = {5, 10, 15, 20, 25, 50, 100, 150, 200};
-    int offset = 0;
     array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
 
     cout << "---Generation--- " << endl;
