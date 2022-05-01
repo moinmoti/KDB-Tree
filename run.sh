@@ -1,7 +1,4 @@
-#cmake -G "Unix Makefiles" .
-cmake -S . -B build
-cmake --build build -j --clean-first
-# cmake --install build
+meson compile -C build
 # Q=(Knn Rng)
 # T=(T)
 # W=(W E R)
