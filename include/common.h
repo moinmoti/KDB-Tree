@@ -46,11 +46,7 @@ constexpr double distManhattan(float x1, float y1, float x2, float y2) {
 }
 constexpr uint oppDir(uint d) {return (d + D) % (D * 2);};
 
-constexpr uint CYCLIC = 0;
-constexpr uint SPREAD = 1;
-// constexpr uint ORIENT = 2;
-// constexpr uint TYPE = SPREAD;
-constexpr uint TYPE = SPREAD;
+enum SplitType {Cyclic, Spread};
 
 struct Record {
     int id;

@@ -4,7 +4,7 @@ void printRect(string Rect, array<float, 4> r) {
     cerr << Rect << ": " << r[0] << " | " << r[1] << " | " << r[2] << " | " << r[3] << endl;
 }
 
-KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, string type) {
+KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, SplitType _splitType) {
     pageCap = _pageCap;
     fanout = _fanout;
 
@@ -13,6 +13,7 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, string ty
     root->height = 1;
     root->splitDim = 1;
     root->contents = vector<Node *>();
+    Node::Split::type = _splitType;
 
     Node *firstPage = new Node();
     firstPage->rect = root->rect;
@@ -26,8 +27,10 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, string ty
 KDBTree::~KDBTree() {}
 
 void KDBTree::snapshot() const {
-    string splitType = (TYPE) ? "Spread" : "Cyclic";
-    ofstream log(splitType + "-KDBTree.csv");
+    string splitStr = (splitType == Cyclic)   ? "Cyclic"
+                      : (splitType == Spread) ? "Spread"
+                                              : "Invalid";
+    ofstream log(splitStr + "-KDBTree.csv");
     stack<Node *> toVisit({root});
     Node *dir;
     while (!toVisit.empty()) {
@@ -248,8 +251,8 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
 
 int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 2 * sizeof(int);
-    int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(Node *);
-    int directorySize = 4 * sizeof(float) + sizeof(int) + sizeof(Node *);
+    int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
+    int directorySize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
     stack<Node *> toVisit({root});
     Node *dir;
     while (!toVisit.empty()) {

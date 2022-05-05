@@ -1,16 +1,16 @@
 #pragma once
 
 #include "Node.h"
-#include "common.h"
 
 class KDBTree {
 
 public:
     int fanout;
     int pageCap;
+    SplitType splitType;
     Node *root;
 
-    KDBTree(int, int, array<float, 4>, string);
+    KDBTree(int, int, array<float, 4>, SplitType);
     ~KDBTree();
 
     void snapshot() const;

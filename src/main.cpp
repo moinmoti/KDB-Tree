@@ -1,5 +1,4 @@
 #include "KDBTree.h"
-#include "common.h"
 
 struct Stats {
     struct StatType {
@@ -164,7 +163,6 @@ int main(int argCount, char **args) {
     long limit = 1e8;
     /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" +
        to_string(fanout) + "-" + to_string(pageCap); */
-    string splitType = (TYPE) ? "Spread" : "Cyclic";
     string sign = "-" + to_string(fanout);
 
     string expPath = projectPath + "/Experiments/";
@@ -184,7 +182,7 @@ int main(int argCount, char **args) {
         cout << "Unable to open log.txt";
     // high_resolution_clock::time_point start = high_resolution_clock::now();
     cout << "Defining KDBTree..." << endl;
-    KDBTree index = KDBTree(pageCap, fanout, boundary, splitType);
+    KDBTree index = KDBTree(pageCap, fanout, boundary, Spread);
     cout << "Bulkloading KDBTree..." << endl;
     index.bulkload(dataFile, limit);
     /* double hTreeCreationTime =

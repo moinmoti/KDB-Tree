@@ -1,5 +1,7 @@
 #include "Node.h"
 
+SplitType Node::Split::type;
+
 int overlaps(array<float, 4> r, array<float, 2> p) {
     for (int i = 0; i < D; i++) {
         if (r[i] > p[i] || p[i] > r[i + D])
@@ -84,12 +86,12 @@ vector<Record> Node::getPoints() const {
     return allPoints;
 }
 
-Split *Node::getSplit() const {
+Node::Split *Node::getSplit() const {
     bool axis;
     vector<Record> allPoints = getPoints();
-    if (TYPE == CYCLIC) {
+    if (Split::type == Cyclic) {
         axis = !splitDim;
-    } else if (TYPE == SPREAD) {
+    } else if (Split::type == Spread) {
         array<float, 2> low({180, 90}), high({-180, -90});
         for (auto p : allPoints) {
             if (p.data[0] < low[0])
@@ -102,10 +104,12 @@ Split *Node::getSplit() const {
                 high[1] = p.data[1];
         }
         axis = (high[0] - low[0]) < (high[1] - low[1]);
-    } else
+    } else {
         cerr << "Error: Invalid TYPE!!!" << endl;
+        abort();
+    }
     sort(all(allPoints),
-        [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
+         [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
     Split *split = new Split();
     split->axis = axis;
     split->pt = allPoints[allPoints.size() / 2].data[axis];

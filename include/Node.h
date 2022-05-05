@@ -1,9 +1,15 @@
 #pragma once
 
-#include "Split.h"
 #include "common.h"
 
 struct Node {
+
+    struct Split {
+        static SplitType type;
+        float pt;
+        bool axis;
+    };
+
     int height;
     bool splitDim;
     array<float, 4> rect; // xlow, ylow, xhigh, yhigh
@@ -21,7 +27,6 @@ struct Node {
     double minSqrDist(array<float, 4>) const;
     bool overlap(array<float, 4>) const;
 
-    vector<Node*> cascadingSplit(Split*, vector<Node*> = vector<Node*>());
     vector<Record> getPoints() const;
     Split* getSplit() const;
     int scan(array<float, 4>) const;
