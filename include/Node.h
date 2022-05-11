@@ -10,15 +10,12 @@ struct Node {
         bool axis;
     };
 
+    static int fanout;
+    static int pageCap;
+
     int height;
     bool splitDim;
     array<float, 4> rect; // xlow, ylow, xhigh, yhigh
-
-    // Directory node specific members
-    optional<vector<Node*>> contents;
-
-    // Page node specific members
-    optional<vector<Record>> points;
 
     // Rect methods
     bool containsPt(array<float, 2> p) const;
@@ -27,12 +24,43 @@ struct Node {
     double minSqrDist(array<float, 4>) const;
     bool overlap(array<float, 4>) const;
 
-    vector<Record> getPoints() const;
+    virtual vector<Record> getPoints() const = 0;
     Split* getSplit() const;
-    int scan(array<float, 4>) const;
-    int size() const;
-    vector<Node*> splitDirectory(int &, Split * = NULL);
-    vector<Node*> splitPage(Split * = NULL);
+    virtual int insert(Node *, Record) = 0;
+    virtual array<Node*, 2> partition(int &, Split * = NULL) = 0;
+    virtual int range(int &, array<float, 4> query) const = 0;
+    virtual int size() const = 0;
 
-    ~Node();
+    virtual ~Node() = 0;
+};
+
+struct Directory: Node {
+    vector<Node*> contents;
+
+    Directory();
+    explicit Directory(Node *);
+
+    vector<Record> getPoints() const;
+    int insert(Node *, Record);
+    array<Node*, 2> partition(int &, Split * = NULL);
+    int range(int &, array<float, 4> query) const;
+    int size() const;
+
+    ~Directory();
+};
+
+struct Page: Node {
+    vector<Record> points;
+
+    Page();
+    explicit Page(Node *);
+
+    vector<Record> getPoints() const;
+    Node* fission();
+    int insert(Node *, Record);
+    array<Node *, 2> partition(int &, Split * = NULL);
+    int range(int &, array<float, 4>) const;
+    int size() const;
+
+    ~Page();
 };

@@ -1,6 +1,8 @@
 #include "Node.h"
 
 SplitType Node::Split::type;
+int Node::fanout;
+int Node::pageCap;
 
 int overlaps(array<float, 4> r, array<float, 2> p) {
     for (int i = 0; i < D; i++) {
@@ -11,7 +13,7 @@ int overlaps(array<float, 4> r, array<float, 2> p) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// Rectangle Methods
+// Node Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
 void printNode(string str, array<float, 4> r) {
@@ -69,23 +71,6 @@ double Node::minSqrDist(array<float, 4> r) const {
     return 0;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// Node Methods
-/////////////////////////////////////////////////////////////////////////////////////////
-
-vector<Record> Node::getPoints() const {
-    vector<Record> allPoints;
-    if (points)
-        allPoints = points.value();
-    else {
-        for (auto cn : contents.value()) {
-            vector<Record> tempPoints = cn->getPoints();
-            allPoints.insert(allPoints.end(), all(tempPoints));
-        }
-    }
-    return allPoints;
-}
-
 Node::Split *Node::getSplit() const {
     bool axis;
     vector<Record> allPoints = getPoints();
@@ -116,93 +101,198 @@ Node::Split *Node::getSplit() const {
     return split;
 }
 
-int Node::scan(array<float, 4> query) const {
-    int totalPoints = 0;
-    if (inside(query))
-        return points->size();
-    for (auto p : points.value())
-        if (overlaps(query, p.data))
-            totalPoints++;
-    return totalPoints;
+/////////////////////////////////////////////////////////////////////////////////////////
+// Directory Methods
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Directory::Directory(Node *pg) {
+    rect = pg->rect;
+    splitDim = pg->splitDim;
+    height = 1;
+    delete pg;
 }
 
-int Node::size() const {
+vector<Record> Directory::getPoints() const {
+    vector<Record> allPoints;
+    for (auto cn : contents) {
+        vector<Record> tempPoints = cn->getPoints();
+        allPoints.insert(allPoints.end(), all(tempPoints));
+    }
+    return allPoints;
+}
+
+int Directory::insert(Node *pn, Record p) {
+    vector<Node *> newNodes;
+    auto cn = contents.begin();
+    while (!(*cn)->containsPt(p.data))
+        cn++;
+    int writes = (*cn)->insert(this, p);
+    if (contents.size() > fanout) {
+        Directory *dpn = dynamic_cast<Directory *>(pn);
+        array<Node *, 2> newDirs = partition(writes);
+        if (pn->height == height) {
+            height++;
+        } else {
+            dpn->contents.erase(find(all(dpn->contents), this));
+            delete this;
+        }
+        dpn->contents.emplace_back(newDirs);
+    }
+    return writes;
+}
+
+int Directory::range(int &pointCount, array<float, 4> query) const {
+    int reads = 0;
+    for (auto cn : contents) {
+        if (cn->overlap(query))
+            reads += cn->range(pointCount, query);
+    }
+    return reads;
+}
+
+int Directory::size() const {
     int rectSize = sizeof(float) * 4;
-    int typeSize = 0;
-    if (points)
-        typeSize = sizeof(vector<array<float, 2>>);
-    else
-        typeSize = sizeof(vector<Node *>) + contents->size() * sizeof(Node *);
+    int typeSize = sizeof(vector<Node *>) + contents.size() * sizeof(void *);
     int totalSize = typeSize + rectSize;
     return totalSize;
 }
 
-vector<Node *> Node::splitDirectory(int &writes, Split *split) {
-    vector<Node *> dirs = {new Node(), new Node()};
+array<Node *, 2> Directory::partition(int &writes, Split *split) {
+    array<Node *, 2> dirs = {new Directory(), new Directory()};
     if (split == NULL)
         split = getSplit();
     for (int i = 0; i < dirs.size(); i++) {
-        dirs[i]->height = height;
-        dirs[i]->rect = rect;
-        dirs[i]->rect[split->axis + !i * D] = split->pt;
-        dirs[i]->contents = vector<Node *>();
-        dirs[i]->splitDim = split->axis;
-    }
-    for (auto cn : contents.value()) {
-        if (cn->rect[split->axis + D] <= split->pt)
-            dirs[0]->contents->emplace_back(cn);
-        else if (cn->rect[split->axis] >= split->pt)
-            dirs[1]->contents->emplace_back(cn);
-        else {
-            vector<Node *> newNodes;
-            if (cn->points) {
-                newNodes = cn->splitPage(split);
-                writes += 3;
-            } else
-                newNodes = cn->splitDirectory(writes, split);
-            for (auto node : newNodes)
-                dirs[node->getCenter()[split->axis] > split->pt]->contents->emplace_back(node);
-        }
+        Directory *dir = dynamic_cast<Directory *>(dirs[i]);
+        dir->height = height;
+        dir->rect = rect;
+        dir->rect[split->axis + !i * D] = split->pt;
+        dir->contents = vector<Node *>();
+        dir->splitDim = split->axis;
     }
 
-    contents->clear();
+    // Splitting contents
+    while (!contents.empty()) {
+        Node *cn = contents.front();
+        if (cn->rect[split->axis + D] <= split->pt)
+            dynamic_cast<Directory *>(dirs[0])->contents.emplace_back(cn);
+        else if (cn->rect[split->axis] >= split->pt)
+            dynamic_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
+        else {
+            contents.erase(find(all(contents), cn));
+            contents.emplace_back(cn->partition(writes, split));
+            delete cn;
+        }
+        contents.erase(contents.begin());
+    }
+
     return dirs;
 }
 
-vector<Node *> Node::splitPage(Split *split) {
-    vector<Node *> pages = {new Node(), new Node()};
+Directory::~Directory() {
+    for (auto cn : contents) {
+        delete cn;
+    }
+    contents.clear();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Page Methods
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Page::Page(Node *dir) {
+    rect = dir->rect;
+    splitDim = dir->splitDim;
+    height = 0;
+    delete dir;
+}
+
+vector<Record> Page::getPoints() const { return points; }
+
+Node *Page::fission() {
+    int writes = 0;
+    Node *node = (Directory *)this;
+    node->height = log(points.size()) / log(pageCap);
+    uint N = ceil(points.size() / 2);
+    Directory *dir = dynamic_cast<Directory *>(node);
+    dir->contents.emplace_back(partition(writes));
+    for (; N > pageCap && dir->contents.size() <= fanout / 2; N = ceil(N / 2)) {
+        vector<Node *> newPages;
+        for (auto cn : dir->contents) {
+            newPages.emplace_back(cn->partition(writes));
+            delete cn;
+        }
+        dir->contents = newPages;
+    }
+    if (N > pageCap) {
+        for (auto &cn : dir->contents)
+            cn = dynamic_cast<Page *>(cn)->fission();
+    }
+    delete this;
+    return node;
+}
+
+int Page::insert(Node *pn, Record p) {
+    int writes = 2;
+    points.emplace_back(p);
+    if (points.size() > pageCap) {
+        Directory *dpn = dynamic_cast<Directory *>(pn);
+        dpn->contents.erase(find(all(dpn->contents), this));
+        dpn->contents.emplace_back(partition(writes));
+        delete this;
+    }
+    return writes;
+}
+
+int Page::range(int &pointCount, array<float, 4> query) const {
+    if (inside(query))
+        pointCount += points.size();
+    else {
+        for (auto p : points)
+            if (overlaps(query, p.data))
+                pointCount++;
+    }
+    return 1;
+}
+
+int Page::size() const {
+    int rectSize = sizeof(float) * 4;
+    int typeSize = sizeof(vector<array<float, 2>>);
+    int totalSize = typeSize + rectSize;
+    return totalSize;
+}
+
+array<Node *, 2> Page::partition(int &writes, Split *split) {
+    array<Node *, 2> pages = {new Page(), new Page()};
     if (split == NULL)
         split = getSplit();
     for (int i = 0; i < pages.size(); i++) {
-        pages[i]->height = 0;
-        pages[i]->rect = rect;
-        pages[i]->rect[split->axis + !i * D] = split->pt;
-        pages[i]->points = vector<Record>();
-        pages[i]->splitDim = split->axis;
+        Page *page = dynamic_cast<Page *>(pages[i]);
+        page->height = 0;
+        page->rect = rect;
+        page->rect[split->axis + !i * D] = split->pt;
+        page->points = vector<Record>();
+        page->splitDim = split->axis;
     }
 
     // Splitting points
-    for (auto p : (points).value()) {
+    Page *firstPage = dynamic_cast<Page *>(pages[0]);
+    Page *secondPage = dynamic_cast<Page *>(pages[1]);
+    for (auto p : points) {
         if (p.data[split->axis] < split->pt)
-            pages[0]->points->emplace_back(p);
+            firstPage->points.emplace_back(p);
         else if (p.data[split->axis] > split->pt)
-            pages[1]->points->emplace_back(p);
+            secondPage->points.emplace_back(p);
         else {
-            if (pages[0]->points->size() < pages[1]->points->size())
-                pages[0]->points->emplace_back(p);
+            if (firstPage->points.size() < secondPage->points.size())
+                firstPage->points.emplace_back(p);
             else
-                pages[1]->points->emplace_back(p);
+                secondPage->points.emplace_back(p);
         }
     }
+
+    points.clear();
+    writes = 3;
     return pages;
 }
 
-Node::~Node() {
-    if (points) {
-        points->clear();
-        points.reset();
-    } else {
-        contents->clear();
-        contents.reset();
-    }
-}
+Page::~Page() { points.clear(); }

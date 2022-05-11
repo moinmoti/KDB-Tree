@@ -5,75 +5,54 @@ void printRect(string Rect, array<float, 4> r) {
 }
 
 KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, SplitType _splitType) {
-    pageCap = _pageCap;
-    fanout = _fanout;
-
-    root = new Node();
-    root->rect = _boundary;
-    root->height = 1;
-    root->splitDim = 1;
-    root->contents = vector<Node *>();
+    Node::fanout = _fanout;
+    Node::pageCap = _pageCap;
     Node::Split::type = _splitType;
 
-    Node *firstPage = new Node();
+    root = new Directory();
+    Directory *dRoot = dynamic_cast<Directory *>(root);
+    dRoot->rect = _boundary;
+    dRoot->height = 1;
+    dRoot->splitDim = 1;
+    dRoot->contents = vector<Node *>();
+
+    Node *firstPage = new Page();
     firstPage->rect = root->rect;
     firstPage->height = 0;
     firstPage->splitDim = 1;
-    firstPage->points = vector<Record>();
+    dynamic_cast<Page *>(firstPage)->points = vector<Record>();
 
-    root->contents->emplace_back(firstPage);
+    dRoot->contents.emplace_back(firstPage);
 }
 
 KDBTree::~KDBTree() {}
 
 void KDBTree::snapshot() const {
-    string splitStr = (splitType == Cyclic)   ? "Cyclic"
-                      : (splitType == Spread) ? "Spread"
-                                              : "Invalid";
+    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
+                      : (Node::Split::type == Spread) ? "Spread"
+                                                      : "Invalid";
     ofstream log(splitStr + "-KDBTree.csv");
-    stack<Node *> toVisit({root});
-    Node *dir;
+    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
+    Directory *dir;
     while (!toVisit.empty()) {
         dir = toVisit.top();
         toVisit.pop();
-        log << dir->height << "," << dir->contents->size();
+        log << dir->height << "," << dir->contents.size();
         for (auto p : dir->rect)
             log << "," << p;
         log << endl;
-        for (auto cn : dir->contents.value()) {
-            if (cn->points) {
-                log << cn->height << "," << cn->points->size();
+        for (auto cn : dir->contents) {
+            if (cn->height) {
+                toVisit.push(dynamic_cast<Directory *>(cn));
+            } else {
+                log << cn->height << "," << dynamic_cast<Page *>(cn)->points.size();
                 for (auto p : cn->rect)
                     log << "," << p;
                 log << endl;
-            } else {
-                toVisit.push(cn);
             }
         }
     }
     log.close();
-}
-
-void KDBTree::fission(Node *node) {
-    node->height = log(node->points->size()) / log(pageCap);
-    uint N = ceil(node->points->size() / 2);
-    node->contents = node->splitPage();
-    node->points->clear();
-    node->points.reset();
-    for (; N > pageCap && node->contents->size() <= fanout / 2; N = ceil(N / 2)) {
-        vector<Node *> newPages;
-        for (auto cn : node->contents.value()) {
-            vector<Node *> pages = cn->splitPage();
-            for (auto page : pages)
-                newPages.emplace_back(page);
-            delete cn;
-        }
-        node->contents = newPages;
-    }
-    if (N > pageCap) {
-        for (auto cn : node->contents.value())
-            fission(cn);
-    }
 }
 
 void KDBTree::bulkload(string filename, long limit) {
@@ -99,56 +78,23 @@ void KDBTree::bulkload(string filename, long limit) {
     } else
         cerr << "Data file " << filename << " not found!";
 
-    // Delete the first page.
-    delete root->contents->front();
-    root->contents->clear();
-    root->contents.reset();
+    root = (Page *)root;
+    Page *pRoot = dynamic_cast<Page *>(root);
 
-    root->points = Points;
+    pRoot->points = Points;
     cout << "Initiate fission" << endl;
-    fission(root);
-}
-
-int KDBTree::insertPoint(Node *pn, Node *node, Record p) {
-    vector<Node *> newNodes;
-    int writes;
-    if (node->points) {
-        node->points->emplace_back(p);
-        writes = 2;
-        if (node->points->size() > pageCap) {
-            newNodes = node->splitPage();
-            writes = 3;
-        }
-    } else {
-        auto cn = node->contents->begin();
-        while (!(*cn)->containsPt(p.data))
-            cn++;
-        writes = insertPoint(node, *cn, p);
-        if (node->contents->size() > fanout)
-            newNodes = node->splitDirectory(writes);
-    }
-    if (!newNodes.empty()) {
-        if (node == root) {
-            root->contents->clear();
-            root->height++;
-        } else {
-            pn->contents->erase(find(all(pn->contents.value()), node));
-            delete node;
-        }
-        for (auto cn : newNodes)
-            pn->contents->emplace_back(cn);
-    }
-    return writes;
+    if (pRoot->points.size() > Node::pageCap)
+        root = pRoot->fission();
 }
 
 void KDBTree::insertQuery(Record p, map<string, double> &stats) {
-    stats["io"] = insertPoint(root, root, p);
+    stats["io"] = root->insert(root, p);
 }
 
 void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
     Node *node = root;
-    while (node->contents) {
-        auto cn = node->contents->begin();
+    while (node->height) {
+        auto cn = dynamic_cast<Directory *>(node)->contents.begin();
         while (!(*cn)->containsPt(p.data))
             cn++;
         node = *cn;
@@ -158,20 +104,9 @@ void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
         node->points->erase(pt); */
 }
 
-void rangeSearch(Node *node, int &pointCount, array<float, 4> query, map<string, double> &stats) {
-    if (node->points) {
-        stats["io"]++;
-        // pointCount += node->scan(query);
-    } else {
-        for (auto cn : node->contents.value())
-            if (cn->overlap(query))
-                rangeSearch(cn, pointCount, query, stats);
-    }
-}
-
 void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
-    int pointCount = 0;
-    rangeSearch(root, pointCount, query, stats);
+    int pointCount;
+    stats["io"] = root->range(pointCount, query);
     // trace(pointCount);
 }
 
@@ -201,8 +136,9 @@ void kNNSearch(Node *node, array<float, 4> query,
         unseenNodes.pop();
         minDist = knnPts.top().dist;
         if (dist < minDist) {
-            if (node->points) {
-                for (auto p : node->points.value()) {
+            if (node->height == 0) {
+                Page *pg = dynamic_cast<Page *>(node);
+                for (auto p : pg->points) {
                     minDist = knnPts.top().dist;
                     dist = sqrDist(query, p.data);
                     if (dist < minDist) {
@@ -215,8 +151,9 @@ void kNNSearch(Node *node, array<float, 4> query,
                 }
                 stats["io"]++;
             } else {
+                Directory *dir = dynamic_cast<Directory *>(node);
                 minDist = knnPts.top().dist;
-                for (auto cn : node->contents.value()) {
+                for (auto cn : dir->contents) {
                     dist = cn->minSqrDist(query);
                     if (dist < minDist) {
                         knnNode kn;
@@ -253,15 +190,15 @@ int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 2 * sizeof(int);
     int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
     int directorySize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
-    stack<Node *> toVisit({root});
-    Node *dir;
+    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
+    Directory *dir;
     while (!toVisit.empty()) {
         dir = toVisit.top();
         toVisit.pop();
         stats["directories"]++;
-        for (auto cn : dir->contents.value()) {
-            if (cn->contents) {
-                toVisit.push(cn);
+        for (auto cn : dir->contents) {
+            if (cn->height) {
+                toVisit.push(dynamic_cast<Directory *>(cn));
             } else
                 stats["pages"]++;
         }
