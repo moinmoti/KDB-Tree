@@ -136,7 +136,8 @@ int Directory::insert(Node *pn, Record p) {
             dpn->contents.erase(find(all(dpn->contents), this));
             delete this;
         }
-        dpn->contents.emplace_back(newDirs);
+        for (auto dir : newDirs)
+            dpn->contents.emplace_back(dir);
     }
     return writes;
 }
@@ -179,7 +180,9 @@ array<Node *, 2> Directory::partition(int &writes, Split *split) {
             dynamic_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
         else {
             contents.erase(find(all(contents), cn));
-            contents.emplace_back(cn->partition(writes, split));
+            array<Node *, 2> newNodes = cn->partition(writes, split);
+            for (auto nd : newNodes)
+                contents.emplace_back(nd);
             delete cn;
         }
         contents.erase(contents.begin());
@@ -212,14 +215,18 @@ Node *Page::fission() {
     node->height = log(points.size()) / log(pageCap);
     uint N = ceil(points.size() / 2);
     Directory *dir = dynamic_cast<Directory *>(node);
-    dir->contents.emplace_back(partition(writes));
+    array<Node *, 2> newPages = partition(writes);
+    for (auto pg : newPages)
+        dir->contents.emplace_back(pg);
     for (; N > pageCap && dir->contents.size() <= fanout / 2; N = ceil(N / 2)) {
-        vector<Node *> newPages;
+        vector<Node *> pages;
         for (auto cn : dir->contents) {
-            newPages.emplace_back(cn->partition(writes));
+            array<Node *, 2> newPages = cn->partition(writes);
+            for (auto pg : newPages)
+                pages.emplace_back(pg);
             delete cn;
         }
-        dir->contents = newPages;
+        dir->contents = pages;
     }
     if (N > pageCap) {
         for (auto &cn : dir->contents)
@@ -237,7 +244,9 @@ int Page::insert(Node *pn, Record p) {
     if (points.size() > pageCap) {
         Directory *dpn = dynamic_cast<Directory *>(pn);
         dpn->contents.erase(find(all(dpn->contents), this));
-        dpn->contents.emplace_back(partition(writes));
+        array<Node *, 2> newPages = partition(writes);
+        for (auto pg : newPages)
+            dpn->contents.emplace_back(pg);
         delete this;
     }
     return writes;
