@@ -27,34 +27,6 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, SplitType
 
 KDBTree::~KDBTree() {}
 
-void KDBTree::snapshot() const {
-    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
-                      : (Node::Split::type == Spread) ? "Spread"
-                                                      : "Invalid";
-    ofstream log(splitStr + "-KDBTree.csv");
-    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
-    Directory *dir;
-    while (!toVisit.empty()) {
-        dir = toVisit.top();
-        toVisit.pop();
-        log << dir->height << "," << dir->contents.size();
-        for (auto p : dir->rect)
-            log << "," << p;
-        log << endl;
-        for (auto cn : dir->contents) {
-            if (cn->height) {
-                toVisit.push(dynamic_cast<Directory *>(cn));
-            } else {
-                log << cn->height << "," << dynamic_cast<Page *>(cn)->points.size();
-                for (auto p : cn->rect)
-                    log << "," << p;
-                log << endl;
-            }
-        }
-    }
-    log.close();
-}
-
 void KDBTree::bulkload(string filename, long limit) {
     string line;
     ifstream file(filename);
@@ -87,10 +59,6 @@ void KDBTree::bulkload(string filename, long limit) {
         root = pRoot->fission();
 }
 
-void KDBTree::insertQuery(Record p, map<string, double> &stats) {
-    stats["io"] = root->insert(root, p);
-}
-
 void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
     Node *node = root;
     while (node->height) {
@@ -104,10 +72,8 @@ void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
         node->points->erase(pt); */
 }
 
-void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
-    int pointCount;
-    stats["io"] = root->range(pointCount, query);
-    // trace(pointCount);
+void KDBTree::insertQuery(Record p, map<string, double> &stats) {
+    stats["io"] = root->insert(root, p);
 }
 
 typedef struct knnPoint {
@@ -186,6 +152,12 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
     } */
 }
 
+void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
+    int pointCount;
+    stats["io"] = root->range(pointCount, query);
+    // trace(pointCount);
+}
+
 int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 2 * sizeof(int);
     int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
@@ -205,4 +177,32 @@ int KDBTree::size(map<string, double> &stats) const {
     }
     totalSize += pageSize * stats["pages"] + directorySize * stats["directories"];
     return totalSize;
+}
+
+void KDBTree::snapshot() const {
+    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
+                      : (Node::Split::type == Spread) ? "Spread"
+                                                      : "Invalid";
+    ofstream log(splitStr + "-KDBTree.csv");
+    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
+    Directory *dir;
+    while (!toVisit.empty()) {
+        dir = toVisit.top();
+        toVisit.pop();
+        log << dir->height << "," << dir->contents.size();
+        for (auto p : dir->rect)
+            log << "," << p;
+        log << endl;
+        for (auto cn : dir->contents) {
+            if (cn->height) {
+                toVisit.push(dynamic_cast<Directory *>(cn));
+            } else {
+                log << cn->height << "," << dynamic_cast<Page *>(cn)->points.size();
+                for (auto p : cn->rect)
+                    log << "," << p;
+                log << endl;
+            }
+        }
+    }
+    log.close();
 }

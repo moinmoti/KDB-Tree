@@ -55,8 +55,8 @@ struct Page: Node {
     Page();
     explicit Page(Node *);
 
-    vector<Record> getPoints() const;
     Node* fission();
+    vector<Record> getPoints() const;
     int insert(Node *, Record);
     array<Node *, 2> partition(int &, Split * = NULL);
     int range(int &, array<float, 4>) const;

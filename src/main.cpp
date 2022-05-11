@@ -14,6 +14,28 @@ struct Stats {
     StatType reload;
 };
 
+void deleteQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
+    Record p;
+    for (uint i = 0; i < p.data.size(); i++)
+        p.data[i] = get<1>(q)[i];
+    p.id = get<2>(q);
+    map<string, double> info;
+    index->deleteQuery(p, info);
+    stats.del.io += info["io"];
+    stats.del.count++;
+}
+
+void insertQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
+    Record p;
+    for (uint i = 0; i < p.data.size(); i++)
+        p.data[i] = get<1>(q)[i];
+    p.id = get<2>(q);
+    map<string, double> info;
+    index->insertQuery(p, info);
+    stats.insert.io += info["io"];
+    stats.insert.count++;
+}
+
 void knnQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
     array<float, 2> p;
     for (uint i = 0; i < p.size(); i++)
@@ -34,28 +56,6 @@ void rangeQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stat
     index->rangeQuery(query, info);
     stats.range[rs].io += info["io"];
     stats.range[rs].count++;
-}
-
-void insertQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
-    Record p;
-    for (uint i = 0; i < p.data.size(); i++)
-        p.data[i] = get<1>(q)[i];
-    p.id = get<2>(q);
-    map<string, double> info;
-    index->insertQuery(p, info);
-    stats.insert.io += info["io"];
-    stats.insert.count++;
-}
-
-void deleteQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
-    Record p;
-    for (uint i = 0; i < p.data.size(); i++)
-        p.data[i] = get<1>(q)[i];
-    p.id = get<2>(q);
-    map<string, double> info;
-    index->deleteQuery(p, info);
-    stats.del.io += info["io"];
-    stats.del.count++;
 }
 
 void evaluate(KDBTree *index, string queryFile, string logFile) {

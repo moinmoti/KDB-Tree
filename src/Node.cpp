@@ -206,8 +206,6 @@ Page::Page(Node *dir) {
     delete dir;
 }
 
-vector<Record> Page::getPoints() const { return points; }
-
 Node *Page::fission() {
     int writes = 0;
     Node *node = (Directory *)this;
@@ -231,6 +229,8 @@ Node *Page::fission() {
     return node;
 }
 
+vector<Record> Page::getPoints() const { return points; }
+
 int Page::insert(Node *pn, Record p) {
     int writes = 2;
     points.emplace_back(p);
@@ -241,24 +241,6 @@ int Page::insert(Node *pn, Record p) {
         delete this;
     }
     return writes;
-}
-
-int Page::range(int &pointCount, array<float, 4> query) const {
-    if (inside(query))
-        pointCount += points.size();
-    else {
-        for (auto p : points)
-            if (overlaps(query, p.data))
-                pointCount++;
-    }
-    return 1;
-}
-
-int Page::size() const {
-    int rectSize = sizeof(float) * 4;
-    int typeSize = sizeof(vector<array<float, 2>>);
-    int totalSize = typeSize + rectSize;
-    return totalSize;
 }
 
 array<Node *, 2> Page::partition(int &writes, Split *split) {
@@ -293,6 +275,24 @@ array<Node *, 2> Page::partition(int &writes, Split *split) {
     points.clear();
     writes = 3;
     return pages;
+}
+
+int Page::range(int &pointCount, array<float, 4> query) const {
+    if (inside(query))
+        pointCount += points.size();
+    else {
+        for (auto p : points)
+            if (overlaps(query, p.data))
+                pointCount++;
+    }
+    return 1;
+}
+
+int Page::size() const {
+    int rectSize = sizeof(float) * 4;
+    int typeSize = sizeof(vector<array<float, 2>>);
+    int totalSize = typeSize + rectSize;
+    return totalSize;
 }
 
 Page::~Page() { points.clear(); }
