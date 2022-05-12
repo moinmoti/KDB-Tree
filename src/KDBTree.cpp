@@ -50,7 +50,7 @@ void KDBTree::bulkload(string filename, long limit) {
     } else
         cerr << "Data file " << filename << " not found!";
 
-    root = (Page *)root;
+    root = new Page(root);
     Page *pRoot = static_cast<Page *>(root);
 
     pRoot->points = Points;
@@ -89,7 +89,7 @@ typedef struct knnNode {
 } knnNode;
 
 void kNNSearch(Node *node, array<float, 4> query,
-               priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
+    priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
     auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
@@ -147,8 +147,9 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
             Record pt = knnPts.top().pt;
             sqrDist = knnPts.top().dist;
             knnPts.pop();
-            trace(pt.id);
+            trace(pt.id, sqrDist);
         }
+        cerr << endl;
     } */
 }
 
@@ -180,9 +181,9 @@ int KDBTree::size(map<string, double> &stats) const {
 }
 
 void KDBTree::snapshot() const {
-    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
-                      : (Node::Split::type == Spread) ? "Spread"
-                                                      : "Invalid";
+    string splitStr = (Node::Split::type == Cyclic)
+                          ? "Cyclic"
+                          : (Node::Split::type == Spread) ? "Spread" : "Invalid";
     ofstream log(splitStr + "-KDBTree.csv");
     stack<Directory *> toVisit({static_cast<Directory *>(root)});
     Directory *dir;

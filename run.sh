@@ -14,5 +14,5 @@ meson compile -C build
 #     done
 # done
 mkdir -p "Experiments/Bulk/L7e7-Q8e3"
-./KDBTree $PWD "Bulk/L7e7-Q8e3" 128 128
-# lldb -- Index $PWD $QF $1 $2
+./Index $PWD "Bulk/L7e7-Q8e3" 128 128
+# lldb -- Index $PWD "Bulk/L7e7-Q8e3" 128 128
