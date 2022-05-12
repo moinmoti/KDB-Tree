@@ -133,7 +133,7 @@ int Directory::insert(Node *pn, Record p) {
         cn++;
     int writes = (*cn)->insert(this, p);
     if (contents.size() > fanout) {
-        Directory *dpn = dynamic_cast<Directory *>(pn);
+        Directory *dpn = static_cast<Directory *>(pn);
         array<Node *, 2> newDirs = partition(writes);
         if (pn->height == height) {
             height++;
@@ -168,7 +168,7 @@ array<Node *, 2> Directory::partition(int &writes, Split *split) {
     if (split == NULL)
         split = getSplit();
     for (int i = 0; i < dirs.size(); i++) {
-        Directory *dir = dynamic_cast<Directory *>(dirs[i]);
+        Directory *dir = static_cast<Directory *>(dirs[i]);
         dir->height = height;
         dir->rect = rect;
         dir->rect[split->axis + !i * D] = split->pt;
@@ -180,9 +180,9 @@ array<Node *, 2> Directory::partition(int &writes, Split *split) {
     while (!contents.empty()) {
         Node *cn = contents.front();
         if (cn->rect[split->axis + D] <= split->pt)
-            dynamic_cast<Directory *>(dirs[0])->contents.emplace_back(cn);
+            static_cast<Directory *>(dirs[0])->contents.emplace_back(cn);
         else if (cn->rect[split->axis] >= split->pt)
-            dynamic_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
+            static_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
         else {
             contents.erase(find(all(contents), cn));
             array<Node *, 2> newNodes = cn->partition(writes, split);
@@ -222,7 +222,7 @@ Node *Page::fission() {
     Node *node = new Directory(this, false);
     node->height = log(points.size()) / log(pageCap);
     uint N = ceil(points.size() / 2);
-    Directory *dir = dynamic_cast<Directory *>(node);
+    Directory *dir = static_cast<Directory *>(node);
     array<Node *, 2> newPages = partition(writes);
     for (auto pg : newPages)
         dir->contents.emplace_back(pg);
@@ -238,7 +238,7 @@ Node *Page::fission() {
     }
     if (N > pageCap) {
         for (auto &cn : dir->contents)
-            cn = dynamic_cast<Page *>(cn)->fission();
+            cn = static_cast<Page *>(cn)->fission();
     }
     delete this;
     return node;
@@ -250,7 +250,7 @@ int Page::insert(Node *pn, Record p) {
     int writes = 2;
     points.emplace_back(p);
     if (points.size() > pageCap) {
-        Directory *dpn = dynamic_cast<Directory *>(pn);
+        Directory *dpn = static_cast<Directory *>(pn);
         dpn->contents.erase(find(all(dpn->contents), this));
         array<Node *, 2> newPages = partition(writes);
         for (auto pg : newPages)
@@ -265,7 +265,7 @@ array<Node *, 2> Page::partition(int &writes, Split *split) {
     if (split == NULL)
         split = getSplit();
     for (int i = 0; i < pages.size(); i++) {
-        Page *page = dynamic_cast<Page *>(pages[i]);
+        Page *page = static_cast<Page *>(pages[i]);
         page->height = 0;
         page->rect = rect;
         page->rect[split->axis + !i * D] = split->pt;
@@ -274,8 +274,8 @@ array<Node *, 2> Page::partition(int &writes, Split *split) {
     }
 
     // Splitting points
-    Page *firstPage = dynamic_cast<Page *>(pages[0]);
-    Page *secondPage = dynamic_cast<Page *>(pages[1]);
+    Page *firstPage = static_cast<Page *>(pages[0]);
+    Page *secondPage = static_cast<Page *>(pages[1]);
     for (auto p : points) {
         if (p.data[split->axis] < split->pt)
             firstPage->points.emplace_back(p);

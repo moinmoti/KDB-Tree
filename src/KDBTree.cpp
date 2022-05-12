@@ -10,7 +10,7 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, SplitType
     Node::Split::type = _splitType;
 
     root = new Directory();
-    Directory *dRoot = dynamic_cast<Directory *>(root);
+    Directory *dRoot = static_cast<Directory *>(root);
     dRoot->rect = _boundary;
     dRoot->height = 1;
     dRoot->splitDim = 1;
@@ -20,7 +20,7 @@ KDBTree::KDBTree(int _pageCap, int _fanout, array<float, 4> _boundary, SplitType
     firstPage->rect = root->rect;
     firstPage->height = 0;
     firstPage->splitDim = 1;
-    dynamic_cast<Page *>(firstPage)->points = vector<Record>();
+    static_cast<Page *>(firstPage)->points = vector<Record>();
 
     dRoot->contents.emplace_back(firstPage);
 }
@@ -51,7 +51,7 @@ void KDBTree::bulkload(string filename, long limit) {
         cerr << "Data file " << filename << " not found!";
 
     root = (Page *)root;
-    Page *pRoot = dynamic_cast<Page *>(root);
+    Page *pRoot = static_cast<Page *>(root);
 
     pRoot->points = Points;
     cout << "Initiate fission" << endl;
@@ -62,7 +62,7 @@ void KDBTree::bulkload(string filename, long limit) {
 void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
     Node *node = root;
     while (node->height) {
-        auto cn = dynamic_cast<Directory *>(node)->contents.begin();
+        auto cn = static_cast<Directory *>(node)->contents.begin();
         while (!(*cn)->containsPt(p.data))
             cn++;
         node = *cn;
@@ -103,7 +103,7 @@ void kNNSearch(Node *node, array<float, 4> query,
         minDist = knnPts.top().dist;
         if (dist < minDist) {
             if (node->height == 0) {
-                Page *pg = dynamic_cast<Page *>(node);
+                Page *pg = static_cast<Page *>(node);
                 for (auto p : pg->points) {
                     minDist = knnPts.top().dist;
                     dist = sqrDist(query, p.data);
@@ -117,7 +117,7 @@ void kNNSearch(Node *node, array<float, 4> query,
                 }
                 stats["io"]++;
             } else {
-                Directory *dir = dynamic_cast<Directory *>(node);
+                Directory *dir = static_cast<Directory *>(node);
                 minDist = knnPts.top().dist;
                 for (auto cn : dir->contents) {
                     dist = cn->minSqrDist(query);
@@ -162,7 +162,7 @@ int KDBTree::size(map<string, double> &stats) const {
     int totalSize = 2 * sizeof(int);
     int pageSize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
     int directorySize = 4 * sizeof(float) + sizeof(int) + sizeof(void *);
-    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
+    stack<Directory *> toVisit({static_cast<Directory *>(root)});
     Directory *dir;
     while (!toVisit.empty()) {
         dir = toVisit.top();
@@ -170,7 +170,7 @@ int KDBTree::size(map<string, double> &stats) const {
         stats["directories"]++;
         for (auto cn : dir->contents) {
             if (cn->height) {
-                toVisit.push(dynamic_cast<Directory *>(cn));
+                toVisit.push(static_cast<Directory *>(cn));
             } else
                 stats["pages"]++;
         }
@@ -184,7 +184,7 @@ void KDBTree::snapshot() const {
                       : (Node::Split::type == Spread) ? "Spread"
                                                       : "Invalid";
     ofstream log(splitStr + "-KDBTree.csv");
-    stack<Directory *> toVisit({dynamic_cast<Directory *>(root)});
+    stack<Directory *> toVisit({static_cast<Directory *>(root)});
     Directory *dir;
     while (!toVisit.empty()) {
         dir = toVisit.top();
@@ -195,9 +195,9 @@ void KDBTree::snapshot() const {
         log << endl;
         for (auto cn : dir->contents) {
             if (cn->height) {
-                toVisit.push(dynamic_cast<Directory *>(cn));
+                toVisit.push(static_cast<Directory *>(cn));
             } else {
-                log << cn->height << "," << dynamic_cast<Page *>(cn)->points.size();
+                log << cn->height << "," << static_cast<Page *>(cn)->points.size();
                 for (auto p : cn->rect)
                     log << "," << p;
                 log << endl;
