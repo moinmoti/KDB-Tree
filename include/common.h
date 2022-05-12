@@ -53,15 +53,13 @@ struct Record {
 };
 
 struct Info {
-    int pages = 0;
-    int points = 0;
-    int reads = 0;
-    int writes = 0;
+    int cost = 0;
+    int output = 0;
 
-    Info operator+(Info i) {
-        return Info{pages+i.pages, points+i.points, reads+i.reads, writes+i.writes};
+    Info operator+(const Info &i) {
+        return Info{cost+i.cost, output+i.output};
     }
-    void operator+=(Info i) {
+    void operator+=(const Info &i) {
         *this = *this + i;
     }
 };

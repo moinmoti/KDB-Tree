@@ -19,9 +19,8 @@ void deleteQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &sta
     for (uint i = 0; i < p.data.size(); i++)
         p.data[i] = get<1>(q)[i];
     p.id = get<2>(q);
-    map<string, double> info;
-    index->deleteQuery(p, info);
-    stats.del.io += info["io"];
+    Info info = index->deleteQuery(p);
+    stats.del.io += info.cost;
     stats.del.count++;
 }
 
@@ -30,9 +29,8 @@ void insertQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &sta
     for (uint i = 0; i < p.data.size(); i++)
         p.data[i] = get<1>(q)[i];
     p.id = get<2>(q);
-    map<string, double> info;
-    index->insertQuery(p, info);
-    stats.insert.io += info["io"];
+    Info info = index->insertQuery(p);
+    stats.insert.io += info.cost;
     stats.insert.count++;
 }
 
@@ -41,9 +39,8 @@ void knnQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats)
     for (uint i = 0; i < p.size(); i++)
         p[i] = get<1>(q)[i];
     int k = get<2>(q);
-    map<string, double> info;
-    index->kNNQuery(p, info, k);
-    stats.knn[k].io += info["io"];
+    Info info = index->kNNQuery(p, k);
+    stats.knn[k].io += info.cost;
     stats.knn[k].count++;
 }
 
@@ -52,9 +49,8 @@ void rangeQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stat
     for (uint i = 0; i < query.size(); i++)
         query[i] = get<1>(q)[i];
     float rs = get<2>(q);
-    map<string, double> info;
-    index->rangeQuery(query, info);
-    stats.range[rs].io += info["io"];
+    Info info = index->rangeQuery(query);
+    stats.range[rs].io += info.cost;
     stats.range[rs].count++;
 }
 

@@ -59,7 +59,8 @@ void KDBTree::bulkload(string filename, long limit) {
         root = pRoot->fission();
 }
 
-void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
+Info KDBTree::deleteQuery(Record p) {
+    Info info;
     Node *node = root;
     while (node->height) {
         auto cn = static_cast<Directory *>(node)->contents.begin();
@@ -70,10 +71,13 @@ void KDBTree::deleteQuery(Record p, map<string, double> &stats) {
     /* auto pt = find(all(node->points.value()), p);
     if (pt != node->points->end())
         node->points->erase(pt); */
+    return info;
 }
 
-void KDBTree::insertQuery(Record p, map<string, double> &stats) {
-    stats["io"] = root->insert(root, p);
+Info KDBTree::insertQuery(Record p) {
+    Info info;
+    info.cost = root->insert(root, p);
+    return info;
 }
 
 typedef struct knnPoint {
@@ -88,11 +92,17 @@ typedef struct knnNode {
     bool operator<(const knnNode &second) const { return dist > second.dist; }
 } knnNode;
 
-void kNNSearch(Node *node, array<float, 4> query,
-    priority_queue<knnPoint, vector<knnPoint>> &knnPts, map<string, double> &stats) {
+Info KDBTree::kNNQuery(array<float, 2> p, int k) {
+    Info info;
+    array query{p[0], p[1], p[0], p[1]};
+
+    vector<knnPoint> tempPts(k);
+    priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
+    // kNNSearch(root, query, knnPts);
     auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
+    Node *node = root;
     priority_queue<knnNode, vector<knnNode>> unseenNodes;
     unseenNodes.emplace(knnNode{node, node->minSqrDist(query)});
     double dist, minDist;
@@ -115,7 +125,7 @@ void kNNSearch(Node *node, array<float, 4> query,
                         knnPts.push(kPt);
                     }
                 }
-                stats["io"]++;
+                info.cost++;
             } else {
                 Directory *dir = static_cast<Directory *>(node);
                 minDist = knnPts.top().dist;
@@ -132,14 +142,6 @@ void kNNSearch(Node *node, array<float, 4> query,
         } else
             break;
     }
-}
-
-void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
-    array query{p[0], p[1], p[0], p[1]};
-
-    vector<knnPoint> tempPts(k);
-    priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
-    kNNSearch(root, query, knnPts, stats);
 
     /* double sqrDist;
     if (k == 32) {
@@ -151,12 +153,14 @@ void KDBTree::kNNQuery(array<float, 2> p, map<string, double> &stats, int k) {
         }
         cerr << endl;
     } */
+    return info;
 }
 
-void KDBTree::rangeQuery(array<float, 4> query, map<string, double> &stats) {
-    int pointCount;
-    stats["io"] = root->range(pointCount, query);
+Info KDBTree::rangeQuery(array<float, 4> query) {
+    Info info;
+    info.cost = root->range(info.output, query);
     // trace(pointCount);
+    return info;
 }
 
 int KDBTree::size(map<string, double> &stats) const {
@@ -181,9 +185,9 @@ int KDBTree::size(map<string, double> &stats) const {
 }
 
 void KDBTree::snapshot() const {
-    string splitStr = (Node::Split::type == Cyclic)
-                          ? "Cyclic"
-                          : (Node::Split::type == Spread) ? "Spread" : "Invalid";
+    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
+                      : (Node::Split::type == Spread) ? "Spread"
+                                                      : "Invalid";
     ofstream log(splitStr + "-KDBTree.csv");
     stack<Directory *> toVisit({static_cast<Directory *>(root)});
     Directory *dir;

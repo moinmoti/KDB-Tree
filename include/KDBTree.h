@@ -10,10 +10,10 @@ struct KDBTree {
     ~KDBTree();
 
     void bulkload(string, long);
-    void deleteQuery(Record, map<string, double> &);
-    void insertQuery(Record, map<string, double> &);
-    void kNNQuery(array<float, 2>, map<string, double> &, int);
-    void rangeQuery(array<float, 4>, map<string, double> &);
+    Info deleteQuery(Record);
+    Info insertQuery(Record);
+    Info kNNQuery(array<float, 2>, int);
+    Info rangeQuery(array<float, 4>);
     int size(map<string, double> &) const;
     void snapshot() const;
 };
