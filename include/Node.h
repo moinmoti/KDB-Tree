@@ -38,7 +38,7 @@ struct Directory: Node {
     vector<Node*> contents;
 
     Directory();
-    explicit Directory(Node *);
+    explicit Directory(Node *, bool = true);
 
     vector<Record> getPoints() const;
     int insert(Node *, Record);
@@ -53,7 +53,7 @@ struct Page: Node {
     vector<Record> points;
 
     Page();
-    explicit Page(Node *);
+    explicit Page(Node *, bool = true);
 
     Node* fission();
     vector<Record> getPoints() const;

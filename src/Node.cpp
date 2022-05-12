@@ -109,11 +109,12 @@ Node::~Node() {}
 
 Directory::Directory() {}
 
-Directory::Directory(Node *pg) {
+Directory::Directory(Node *pg, bool canDel) {
     rect = pg->rect;
     splitDim = pg->splitDim;
     height = 1;
-    delete pg;
+    if (canDel)
+        delete pg;
 }
 
 vector<Record> Directory::getPoints() const {
@@ -208,16 +209,17 @@ Directory::~Directory() {
 
 Page::Page() {}
 
-Page::Page(Node *dir) {
+Page::Page(Node *dir, bool canDel) {
     rect = dir->rect;
     splitDim = dir->splitDim;
     height = 0;
-    delete dir;
+    if (canDel)
+        delete dir;
 }
 
 Node *Page::fission() {
     int writes = 0;
-    Node *node = (Directory *)this;
+    Node *node = new Directory(this, false);
     node->height = log(points.size()) / log(pageCap);
     uint N = ceil(points.size() / 2);
     Directory *dir = dynamic_cast<Directory *>(node);
