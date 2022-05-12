@@ -98,8 +98,7 @@ Info KDBTree::kNNQuery(array<float, 2> p, int k) {
 
     vector<knnPoint> tempPts(k);
     priority_queue<knnPoint, vector<knnPoint>> knnPts(all(tempPts));
-    // kNNSearch(root, query, knnPts);
-    auto sqrDist = [](array<float, 4> x, array<float, 2> y) {
+    auto calcSqrDist = [](array<float, 4> x, array<float, 2> y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
     Node *node = root;
@@ -116,7 +115,7 @@ Info KDBTree::kNNQuery(array<float, 2> p, int k) {
                 Page *pg = static_cast<Page *>(node);
                 for (auto p : pg->points) {
                     minDist = knnPts.top().dist;
-                    dist = sqrDist(query, p.data);
+                    dist = calcSqrDist(query, p.data);
                     if (dist < minDist) {
                         knnPoint kPt;
                         kPt.pt = p;
@@ -159,7 +158,8 @@ Info KDBTree::kNNQuery(array<float, 2> p, int k) {
 Info KDBTree::rangeQuery(array<float, 4> query) {
     Info info;
     info.cost = root->range(info.output, query);
-    // trace(pointCount);
+    /* int pointCount = info.output;
+    trace(pointCount); */
     return info;
 }
 
@@ -185,9 +185,9 @@ int KDBTree::size(map<string, double> &stats) const {
 }
 
 void KDBTree::snapshot() const {
-    string splitStr = (Node::Split::type == Cyclic)   ? "Cyclic"
-                      : (Node::Split::type == Spread) ? "Spread"
-                                                      : "Invalid";
+    string splitStr = (Node::Split::type == Cyclic)
+                          ? "Cyclic"
+                          : (Node::Split::type == Spread) ? "Spread" : "Invalid";
     ofstream log(splitStr + "-KDBTree.csv");
     stack<Directory *> toVisit({static_cast<Directory *>(root)});
     Directory *dir;
