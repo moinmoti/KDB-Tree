@@ -177,7 +177,6 @@ array<Node *, 2> Directory::partition(uint &writes, Split *split) {
         else if (cn->rect[split->axis] >= split->pt)
             static_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
         else {
-            contents.erase(find(all(contents), cn));
             array<Node *, 2> newNodes = cn->partition(writes, split);
             for (auto nd : newNodes)
                 contents.emplace_back(nd);
