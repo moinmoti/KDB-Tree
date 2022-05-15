@@ -13,12 +13,10 @@ KDBTree::KDBTree(uint _pageCap, uint _fanout, Rect _boundary, SplitType _splitTy
     Directory *dRoot = static_cast<Directory *>(root);
     dRoot->rect = _boundary;
     dRoot->splitDim = 1;
-    dRoot->contents = vector<Node *>();
 
     Node *firstPage = new Page();
     firstPage->rect = root->rect;
     firstPage->splitDim = 1;
-    static_cast<Page *>(firstPage)->points = vector<Record>();
 
     dRoot->contents.emplace_back(firstPage);
 }

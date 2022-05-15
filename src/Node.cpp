@@ -90,7 +90,7 @@ Node::Split *Node::getSplit(uint &writes) const {
         abort();
     }
     sort(all(allPoints),
-        [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
+         [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
     Split *split = new Split();
     split->axis = axis;
     split->pt = allPoints[allPoints.size() / 2].data[axis];
@@ -141,8 +141,8 @@ uint Directory::insert(Node *pn, Record p) {
     return writes;
 }
 
-uint Directory::knnSearch(
-    Rect query, min_heap<knnNode> &unseenNodes, max_heap<knnPoint> &knnPts) const {
+uint Directory::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
+                          max_heap<knnPoint> &knnPts) const {
     double minDist = knnPts.top().dist;
     for (auto cn : contents) {
         double dist = cn->minSqrDist(query);
@@ -161,11 +161,9 @@ array<Node *, 2> Directory::partition(uint &writes, Split *split) {
     if (split == NULL)
         split = getSplit(writes);
     for (uint i = 0; i < dirs.size(); i++) {
-        Directory *dir = static_cast<Directory *>(dirs[i]);
-        dir->rect = rect;
-        dir->rect[split->axis + !i * D] = split->pt;
-        dir->contents = vector<Node *>();
-        dir->splitDim = split->axis;
+        dirs[i]->rect = rect;
+        dirs[i]->rect[split->axis + !i * D] = split->pt;
+        dirs[i]->splitDim = split->axis;
     }
 
     // Splitting contents
@@ -292,11 +290,9 @@ array<Node *, 2> Page::partition(uint &writes, Split *split) {
     if (split == NULL)
         split = getSplit(writes);
     for (uint i = 0; i < pages.size(); i++) {
-        Page *page = static_cast<Page *>(pages[i]);
-        page->rect = rect;
-        page->rect[split->axis + !i * D] = split->pt;
-        page->points = vector<Record>();
-        page->splitDim = split->axis;
+        pages[i]->rect = rect;
+        pages[i]->rect[split->axis + !i * D] = split->pt;
+        pages[i]->splitDim = split->axis;
     }
 
     // Splitting points
