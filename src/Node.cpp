@@ -1,11 +1,9 @@
 #include "Node.h"
 
 SplitType Node::Split::type;
-int Node::fanout;
-int Node::pageCap;
 
-int overlaps(array<float, 4> r, array<float, 2> p) {
-    for (int i = 0; i < D; i++) {
+bool overlaps(Rect r, Data p) {
+    for (uint i = 0; i < D; i++) {
         if (r[i] > p[i] || p[i] > r[i + D])
             return false;
     }
@@ -16,36 +14,34 @@ int overlaps(array<float, 4> r, array<float, 2> p) {
 // Node Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
-void printNode(string str, array<float, 4> r) {
+void printNode(string str, Rect r) {
     cerr << str << ": " << r[0] << " | " << r[1] << " | " << r[2] << " | " << r[3] << endl;
 }
 
-bool Node::overlap(array<float, 4> r) const {
-    for (int i = 0; i < D; i++)
+bool Node::overlap(Rect r) const {
+    for (uint i = 0; i < D; i++)
         if (rect[i] > r[i + D] || r[i] > rect[i + D])
             return false;
     return true;
 }
 
-bool Node::containsPt(array<float, 2> p) const {
+bool Node::containsPt(Data p) const {
     bool result = true;
-    for (int i = 0; i < D; i++)
+    for (uint i = 0; i < D; i++)
         result = result & (rect[i] <= p[i]) & (rect[i + D] >= p[i]);
     return result;
 }
 
-bool Node::inside(array<float, 4> r) const {
+bool Node::inside(Rect r) const {
     bool result = true;
-    for (int i = 0; i < D; i++)
+    for (uint i = 0; i < D; i++)
         result = result & (rect[i] >= r[i]) & (rect[i + D] <= r[i + D]);
     return result;
 }
 
-array<float, 2> Node::getCenter() const {
-    return array<float, 2>{(rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2};
-}
+Data Node::getCenter() const { return Data{(rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2}; }
 
-double Node::minSqrDist(array<float, 4> r) const {
+double Node::minSqrDist(Rect r) const {
     bool left = r[2] < rect[0];
     bool right = rect[2] < r[0];
     bool bottom = r[3] < rect[1];
@@ -71,13 +67,13 @@ double Node::minSqrDist(array<float, 4> r) const {
     return 0;
 }
 
-Node::Split *Node::getSplit() const {
+Node::Split *Node::getSplit(uint &writes) const {
     bool axis;
-    vector<Record> allPoints = getPoints();
+    vector<Record> allPoints = getPoints(writes);
     if (Split::type == Cyclic) {
         axis = !splitDim;
     } else if (Split::type == Spread) {
-        array<float, 2> low({180, 90}), high({-180, -90});
+        Data low({180, 90}), high({-180, -90});
         for (auto p : allPoints) {
             if (p.data[0] < low[0])
                 low[0] = p.data[0];
@@ -107,37 +103,36 @@ Node::~Node() {}
 // Directory Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
+uint Directory::capacity;
+
 Directory::Directory() {}
 
 Directory::Directory(Node *pg, bool canDel) {
     rect = pg->rect;
     splitDim = pg->splitDim;
-    height = 1;
     if (canDel)
         delete pg;
 }
 
-vector<Record> Directory::getPoints() const {
+vector<Record> Directory::getPoints(uint &writes) const {
     vector<Record> allPoints;
     for (auto cn : contents) {
-        vector<Record> tempPoints = cn->getPoints();
+        vector<Record> tempPoints = cn->getPoints(writes);
         allPoints.insert(allPoints.end(), all(tempPoints));
     }
     return allPoints;
 }
 
-int Directory::insert(Node *pn, Record p) {
+uint Directory::insert(Node *pn, Record p) {
     vector<Node *> newNodes;
     auto cn = contents.begin();
     while (!(*cn)->containsPt(p.data))
         cn++;
-    int writes = (*cn)->insert(this, p);
-    if (contents.size() > fanout) {
+    uint writes = (*cn)->insert(this, p);
+    if (contents.size() > capacity) {
         Directory *dpn = static_cast<Directory *>(pn);
         array<Node *, 2> newDirs = partition(writes);
-        if (pn->height == height) {
-            height++;
-        } else {
+        if (pn != this) {
             dpn->contents.erase(find(all(dpn->contents), this));
             delete this;
         }
@@ -147,29 +142,27 @@ int Directory::insert(Node *pn, Record p) {
     return writes;
 }
 
-int Directory::range(int &pointCount, array<float, 4> query) const {
-    int reads = 0;
+uint Directory::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
+                          max_heap<knnPoint> &knnPts) const {
+    double minDist = knnPts.top().dist;
     for (auto cn : contents) {
-        if (cn->overlap(query))
-            reads += cn->range(pointCount, query);
+        double dist = cn->minSqrDist(query);
+        if (dist < minDist) {
+            knnNode kn;
+            kn.sn = cn;
+            kn.dist = dist;
+            unseenNodes.push(kn);
+        }
     }
-    return reads;
+    return 0;
 }
 
-int Directory::size() const {
-    int rectSize = sizeof(float) * 4;
-    int typeSize = sizeof(vector<Node *>) + contents.size() * sizeof(void *);
-    int totalSize = typeSize + rectSize;
-    return totalSize;
-}
-
-array<Node *, 2> Directory::partition(int &writes, Split *split) {
+array<Node *, 2> Directory::partition(uint &writes, Split *split) {
     array<Node *, 2> dirs = {new Directory(), new Directory()};
     if (split == NULL)
-        split = getSplit();
-    for (int i = 0; i < dirs.size(); i++) {
+        split = getSplit(writes);
+    for (uint i = 0; i < dirs.size(); i++) {
         Directory *dir = static_cast<Directory *>(dirs[i]);
-        dir->height = height;
         dir->rect = rect;
         dir->rect[split->axis + !i * D] = split->pt;
         dir->contents = vector<Node *>();
@@ -196,6 +189,22 @@ array<Node *, 2> Directory::partition(int &writes, Split *split) {
     return dirs;
 }
 
+uint Directory::range(uint &pointCount, Rect query) const {
+    uint reads = 0;
+    for (auto cn : contents) {
+        if (cn->overlap(query))
+            reads += cn->range(pointCount, query);
+    }
+    return reads;
+}
+
+uint Directory::size() const {
+    uint rectSize = sizeof(float) * 4;
+    uint typeSize = sizeof(vector<Node *>) + contents.size() * sizeof(void *);
+    uint totalSize = typeSize + rectSize;
+    return totalSize;
+}
+
 Directory::~Directory() {
     for (auto cn : contents) {
         delete cn;
@@ -207,26 +216,26 @@ Directory::~Directory() {
 // Page Methods
 /////////////////////////////////////////////////////////////////////////////////////////
 
+uint Page::capacity;
+
 Page::Page() {}
 
 Page::Page(Node *dir, bool canDel) {
     rect = dir->rect;
     splitDim = dir->splitDim;
-    height = 0;
     if (canDel)
         delete dir;
 }
 
 Node *Page::fission() {
-    int writes = 0;
+    uint writes = 0;
     Node *node = new Directory(this, false);
-    node->height = log(points.size()) / log(pageCap);
     uint N = ceil(points.size() / 2);
     Directory *dir = static_cast<Directory *>(node);
     array<Node *, 2> newPages = partition(writes);
     for (auto pg : newPages)
         dir->contents.emplace_back(pg);
-    for (; N > pageCap && dir->contents.size() <= fanout / 2; N = ceil(N / 2)) {
+    for (; N > capacity && dir->contents.size() <= dir->capacity / 2; N = ceil(N / 2)) {
         vector<Node *> pages;
         for (auto cn : dir->contents) {
             array<Node *, 2> newPages = cn->partition(writes);
@@ -236,7 +245,7 @@ Node *Page::fission() {
         }
         dir->contents = pages;
     }
-    if (N > pageCap) {
+    if (N > capacity) {
         for (auto &cn : dir->contents)
             cn = static_cast<Page *>(cn)->fission();
     }
@@ -244,14 +253,18 @@ Node *Page::fission() {
     return node;
 }
 
-vector<Record> Page::getPoints() const { return points; }
+vector<Record> Page::getPoints(uint &writes) const {
+    writes++;
+    return points;
+}
 
-int Page::insert(Node *pn, Record p) {
-    int writes = 2;
+uint Page::insert(Node *pn, Record p) {
+    uint writes = 2;
     points.emplace_back(p);
-    if (points.size() > pageCap) {
+    if (points.size() > capacity) {
         Directory *dpn = static_cast<Directory *>(pn);
         dpn->contents.erase(find(all(dpn->contents), this));
+        writes = 0;
         array<Node *, 2> newPages = partition(writes);
         for (auto pg : newPages)
             dpn->contents.emplace_back(pg);
@@ -260,13 +273,28 @@ int Page::insert(Node *pn, Record p) {
     return writes;
 }
 
-array<Node *, 2> Page::partition(int &writes, Split *split) {
+uint Page::knnSearch(Rect query, min_heap<knnNode> &unseenNodes, max_heap<knnPoint> &knnPts) const {
+    auto calcSqrDist = [](Rect x, Data y) { return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2); };
+    for (auto p : points) {
+        double minDist = knnPts.top().dist;
+        double dist = calcSqrDist(query, p.data);
+        if (dist < minDist) {
+            knnPoint kPt;
+            kPt.pt = p;
+            kPt.dist = dist;
+            knnPts.pop();
+            knnPts.push(kPt);
+        }
+    }
+    return 1;
+}
+
+array<Node *, 2> Page::partition(uint &writes, Split *split) {
     array<Node *, 2> pages = {new Page(), new Page()};
     if (split == NULL)
-        split = getSplit();
-    for (int i = 0; i < pages.size(); i++) {
+        split = getSplit(writes);
+    for (uint i = 0; i < pages.size(); i++) {
         Page *page = static_cast<Page *>(pages[i]);
-        page->height = 0;
         page->rect = rect;
         page->rect[split->axis + !i * D] = split->pt;
         page->points = vector<Record>();
@@ -290,11 +318,11 @@ array<Node *, 2> Page::partition(int &writes, Split *split) {
     }
 
     points.clear();
-    writes = 3;
+    writes += 2; // One write is already added in getSplit either in this call or before.
     return pages;
 }
 
-int Page::range(int &pointCount, array<float, 4> query) const {
+uint Page::range(uint &pointCount, Rect query) const {
     if (inside(query))
         pointCount += points.size();
     else {
@@ -305,10 +333,10 @@ int Page::range(int &pointCount, array<float, 4> query) const {
     return 1;
 }
 
-int Page::size() const {
-    int rectSize = sizeof(float) * 4;
-    int typeSize = sizeof(vector<array<float, 2>>);
-    int totalSize = typeSize + rectSize;
+uint Page::size() const {
+    uint rectSize = sizeof(float) * 4;
+    uint typeSize = sizeof(vector<Data>);
+    uint totalSize = typeSize + rectSize;
     return totalSize;
 }
 

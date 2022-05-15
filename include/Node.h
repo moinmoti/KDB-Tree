@@ -4,63 +4,76 @@
 
 struct Node {
 
+    struct knnPoint {
+        Record pt;
+        double dist = numeric_limits<double>::max();
+        bool operator<(const knnPoint &second) const { return dist < second.dist; }
+    };
+
+    struct knnNode {
+        Node *sn;
+        double dist = numeric_limits<double>::max();
+        bool operator>(const knnNode &second) const { return dist > second.dist; }
+    };
+
     struct Split {
         static SplitType type;
         float pt;
         bool axis;
     };
 
-    static int fanout;
-    static int pageCap;
-
-    int height;
     bool splitDim;
-    array<float, 4> rect; // xlow, ylow, xhigh, yhigh
+    Rect rect; // xlow, ylow, xhigh, yhigh
 
     // Rect methods
-    bool containsPt(array<float, 2> p) const;
-    array<float, 2> getCenter() const;
-    bool inside(array<float, 4>) const;
-    double minSqrDist(array<float, 4>) const;
-    bool overlap(array<float, 4>) const;
+    bool containsPt(Data p) const;
+    Data getCenter() const;
+    bool inside(Rect) const;
+    double minSqrDist(Rect) const;
+    bool overlap(Rect) const;
 
-    virtual vector<Record> getPoints() const = 0;
-    Split* getSplit() const;
-    virtual int insert(Node *, Record) = 0;
-    virtual array<Node*, 2> partition(int &, Split * = NULL) = 0;
-    virtual int range(int &, array<float, 4> query) const = 0;
-    virtual int size() const = 0;
+    virtual vector<Record> getPoints(uint &) const = 0;
+    Split* getSplit(uint &) const;
+    virtual uint insert(Node *, Record) = 0;
+    virtual uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnPoint> &) const = 0;
+    virtual array<Node*, 2> partition(uint &, Split * = NULL) = 0;
+    virtual uint range(uint &, Rect query) const = 0;
+    virtual uint size() const = 0;
 
     virtual ~Node() = 0;
 };
 
 struct Directory: Node {
+    static uint capacity;
     vector<Node*> contents;
 
     Directory();
     explicit Directory(Node *, bool = true);
 
-    vector<Record> getPoints() const;
-    int insert(Node *, Record);
-    array<Node*, 2> partition(int &, Split * = NULL);
-    int range(int &, array<float, 4> query) const;
-    int size() const;
+    vector<Record> getPoints(uint &) const;
+    uint insert(Node *, Record);
+    uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnPoint> &) const;
+    array<Node*, 2> partition(uint &, Split * = NULL);
+    uint range(uint &, Rect query) const;
+    uint size() const;
 
     ~Directory();
 };
 
 struct Page: Node {
+    static uint capacity;
     vector<Record> points;
 
     Page();
     explicit Page(Node *, bool = true);
 
     Node* fission();
-    vector<Record> getPoints() const;
-    int insert(Node *, Record);
-    array<Node *, 2> partition(int &, Split * = NULL);
-    int range(int &, array<float, 4>) const;
-    int size() const;
+    vector<Record> getPoints(uint &) const;
+    uint insert(Node *, Record);
+    uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnPoint> &) const;
+    array<Node *, 2> partition(uint &, Split * = NULL);
+    uint range(uint &, Rect) const;
+    uint size() const;
 
     ~Page();
 };

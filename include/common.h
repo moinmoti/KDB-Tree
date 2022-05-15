@@ -36,7 +36,13 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 
 #define all(c) c.begin(), c.end()
 #define remove(container, element) container.erase(find(all(container), element))
+
 constexpr uint D = 2;
+using Rect = array<float, 2*D>;
+using Data = array<float, D>;
+template<typename T> using max_heap = priority_queue<T, vector<T>>;
+template<typename T> using min_heap = priority_queue<T, vector<T>, greater<T>>;
+
 constexpr double dist(float x1, float y1, float x2, float y2) {
     return pow(x1 - x2, 2) + pow(y1 - y2, 2);
 }
@@ -45,16 +51,16 @@ constexpr double distManhattan(float x1, float y1, float x2, float y2) {
 }
 constexpr uint oppDir(uint d) {return (d + D) % (D * 2);};
 
-enum SplitType {Cyclic, Spread};
+enum SplitType {Cyclic, Orientation, Spread};
 
 struct Record {
-    int id;
-    array<float, 2>  data;
+    uint id;
+    Data  data;
 };
 
 struct Info {
-    int cost = 0;
-    int output = 0;
+    uint cost = 0;
+    uint output = 0;
 
     Info operator+(const Info &i) {
         return Info{cost+i.cost, output+i.output};
