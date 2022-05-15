@@ -90,7 +90,7 @@ Node::Split *Node::getSplit(uint &writes) const {
         abort();
     }
     sort(all(allPoints),
-         [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
+        [axis](const Record &l, const Record &r) { return l.data[axis] < r.data[axis]; });
     Split *split = new Split();
     split->axis = axis;
     split->pt = allPoints[allPoints.size() / 2].data[axis];
@@ -124,7 +124,6 @@ vector<Record> Directory::getPoints(uint &writes) const {
 }
 
 uint Directory::insert(Node *pn, Record p) {
-    vector<Node *> newNodes;
     auto cn = contents.begin();
     while (!(*cn)->containsPt(p.data))
         cn++;
@@ -142,8 +141,8 @@ uint Directory::insert(Node *pn, Record p) {
     return writes;
 }
 
-uint Directory::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
-                          max_heap<knnPoint> &knnPts) const {
+uint Directory::knnSearch(
+    Rect query, min_heap<knnNode> &unseenNodes, max_heap<knnPoint> &knnPts) const {
     double minDist = knnPts.top().dist;
     for (auto cn : contents) {
         double dist = cn->minSqrDist(query);

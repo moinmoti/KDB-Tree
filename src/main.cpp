@@ -156,7 +156,7 @@ int main(int argCount, char **args) {
     string queryType = string(args[2]);
     int fanout = stoi(string(args[3]));
     int pageCap = stoi(string(args[4]));
-    long limit = 1e8;
+    // long limit = 1e8;
     /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" +
        to_string(fanout) + "-" + to_string(pageCap); */
     string sign = "-" + to_string(fanout);
@@ -164,7 +164,7 @@ int main(int argCount, char **args) {
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
     string queryFile = projectPath + "/Data/AIS/Queries/" + queryType + ".txt";
-    string dataFile = projectPath + "/Data/AIS/ships1e8.txt";
+    // string dataFile = projectPath + "/Data/AIS/ships1e8.txt";
     /* string queryFile = projectPath + "/Data/OSM/Queries/" + queryType + ".txt";
     string dataFile = projectPath + "/Data/OSM/data-7e7.txt"; */
     // vector<int> fanout = {5, 10, 15, 20, 25, 50, 100, 150, 200};
@@ -179,8 +179,8 @@ int main(int argCount, char **args) {
     // high_resolution_clock::time_point start = high_resolution_clock::now();
     cout << "Defining KDBTree..." << endl;
     KDBTree index = KDBTree(pageCap, fanout, boundary, Spread);
-    cout << "Bulkloading KDBTree..." << endl;
-    index.bulkload(dataFile, limit);
+    /* cout << "Bulkloading KDBTree..." << endl;
+    index.bulkload(dataFile, limit); */
     /* double hTreeCreationTime =
         duration_cast<microseconds>(high_resolution_clock::now() - start).count();
     log << "KDBTree Creation Time: " << hTreeCreationTime << endl; */
