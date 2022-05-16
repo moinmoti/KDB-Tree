@@ -85,6 +85,8 @@ Node::Split *Node::getSplit(uint &writes) const {
                 high[1] = p.data[1];
         }
         axis = (high[0] - low[0]) < (high[1] - low[1]);
+    } else if (Split::type == Orientation) {
+        axis = (rect[2] - rect[0]) < (rect[3] - rect[1]);
     } else {
         cerr << "Error: Invalid TYPE!!!" << endl;
         abort();
