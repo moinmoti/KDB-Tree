@@ -39,7 +39,7 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 
 constexpr uint D = 2;
 using Rect = array<float, 2*D>;
-using Data = array<float, D>;
+using Point = array<float, D>;
 template<typename T> using max_heap = priority_queue<T, vector<T>>;
 template<typename T> using min_heap = priority_queue<T, vector<T>, greater<T>>;
 
@@ -53,9 +53,9 @@ constexpr uint oppDir(uint d) {return (d + D) % (D * 2);};
 
 enum SplitType {Cyclic, Orientation, Spread};
 
-struct Record {
+struct Entry {
     uint id;
-    Data  data;
+    Point pt;
 };
 
 struct Info {

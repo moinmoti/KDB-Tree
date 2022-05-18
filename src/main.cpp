@@ -15,21 +15,21 @@ struct Stats {
 };
 
 void deleteQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
-    Record p;
-    for (uint i = 0; i < p.data.size(); i++)
-        p.data[i] = get<1>(q)[i];
-    p.id = get<2>(q);
-    Info info = index->deleteQuery(p);
+    Entry e;
+    for (uint i = 0; i < e.pt.size(); i++)
+        e.pt[i] = get<1>(q)[i];
+    e.id = get<2>(q);
+    Info info = index->deleteQuery(e);
     stats.del.io += info.cost;
     stats.del.count++;
 }
 
 void insertQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stats) {
-    Record p;
-    for (uint i = 0; i < p.data.size(); i++)
-        p.data[i] = get<1>(q)[i];
-    p.id = get<2>(q);
-    Info info = index->insertQuery(p);
+    Entry e;
+    for (uint i = 0; i < e.pt.size(); i++)
+        e.pt[i] = get<1>(q)[i];
+    e.id = get<2>(q);
+    Info info = index->insertQuery(e);
     stats.insert.io += info.cost;
     stats.insert.count++;
 }
