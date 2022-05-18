@@ -118,27 +118,7 @@ Info KDBTree::rangeQuery(Rect query) {
     return info;
 }
 
-uint KDBTree::size(map<string, double> &stats) const {
-    uint totalSize = 2 * sizeof(uint);
-    uint pageSize = 4 * sizeof(float) + sizeof(uint) + sizeof(void *);
-    uint directorySize = 4 * sizeof(float) + sizeof(uint) + sizeof(void *);
-    stack<Directory *> toVisit({static_cast<Directory *>(root)});
-    Directory *dir;
-    while (!toVisit.empty()) {
-        dir = toVisit.top();
-        toVisit.pop();
-        stats["directories"]++;
-        for (auto cn : dir->contents) {
-            Directory *dcn = dynamic_cast<Directory *>(cn);
-            if (dcn) {
-                toVisit.push(dcn);
-            } else
-                stats["pages"]++;
-        }
-    }
-    totalSize += pageSize * stats["pages"] + directorySize * stats["directories"];
-    return totalSize;
-}
+uint KDBTree::size(array<uint, 2> &info) const { return root->size(info); }
 
 void KDBTree::snapshot() const {
     string splitStr;
@@ -152,27 +132,7 @@ void KDBTree::snapshot() const {
     else
         splitStr = "Invalid";
 
-    ofstream log(splitStr + "-KDBTree.csv");
-    stack<Directory *> toVisit({static_cast<Directory *>(root)});
-    Directory *dir;
-    while (!toVisit.empty()) {
-        dir = toVisit.top();
-        toVisit.pop();
-        // log << dir->height << "," << dir->contents.size();
-        for (auto p : dir->rect)
-            log << "," << p;
-        log << endl;
-        for (auto cn : dir->contents) {
-            Directory *dcn = dynamic_cast<Directory *>(cn);
-            if (dcn) {
-                toVisit.push(dcn);
-            } else {
-                log << 0 << "," << static_cast<Page *>(cn)->entries.size();
-                for (auto p : cn->rect)
-                    log << "," << p;
-                log << endl;
-            }
-        }
-    }
-    log.close();
+    ofstream ofs(splitStr + "-KDBTree.csv");
+    root->snapshot(ofs);
+    ofs.close();
 }

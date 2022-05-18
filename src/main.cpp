@@ -131,11 +131,11 @@ void evaluate(KDBTree *index, string queryFile, string logFile) {
                 log << "Count:\t" << stats.reload.count << endl;
                 log << "I/O (overall):\t" << stats.reload.io << endl << endl;
 
-                map<string, double> info;
+                array<uint, 2> info;
                 float indexSize = index->size(info);
                 log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-                log << "No. of pages: " << info["pages"] << endl;
-                log << "No. of directories: " << info["directories"] << endl;
+                log << "No. of directories: " << info[0] << endl;
+                log << "No. of pages: " << info[1] << endl;
 
                 log << endl << "************************************************" << endl;
 

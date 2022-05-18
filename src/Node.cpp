@@ -196,11 +196,23 @@ uint Directory::range(uint &pointCount, Rect query) const {
     return reads;
 }
 
-uint Directory::size() const {
-    uint rectSize = sizeof(float) * 4;
-    uint typeSize = sizeof(vector<Node *>) + contents.size() * sizeof(void *);
-    uint totalSize = typeSize + rectSize;
+uint Directory::size(array<uint, 2> &info) const {
+    info[0]++;
+    uint totalSize = 4 * sizeof(float) + sizeof(uint) + sizeof(void *);
+    for (auto cn : contents)
+        totalSize += cn->size(info);
     return totalSize;
+}
+
+uint Directory::snapshot(ofstream &ofs) const {
+    uint height = 0;
+    for (auto cn : contents)
+        height = cn->snapshot(ofs) + 1;
+    ofs << height << "," << contents.size();
+    for (auto c : rect)
+        ofs << "," << c;
+    ofs << endl;
+    return height;
 }
 
 Directory::~Directory() {
@@ -332,11 +344,17 @@ uint Page::range(uint &pointCount, Rect query) const {
     return 1;
 }
 
-uint Page::size() const {
-    uint rectSize = sizeof(float) * 4;
-    uint typeSize = sizeof(vector<Point>);
-    uint totalSize = typeSize + rectSize;
-    return totalSize;
+uint Page::size(array<uint, 2> &info) const {
+    info[1]++;
+    return 4 * sizeof(float) + sizeof(uint) + sizeof(void *);
 }
 
-Page::~Page() { points.clear(); }
+uint Page::snapshot(ofstream &ofs) const {
+    ofs << 0 << "," << entries.size();
+    for (auto c : rect)
+        ofs << "," << c;
+    ofs << endl;
+    return 0;
+}
+
+Page::~Page() { entries.clear(); }

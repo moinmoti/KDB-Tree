@@ -14,6 +14,6 @@ struct KDBTree {
     Info insertQuery(Entry);
     Info kNNQuery(Point, uint);
     Info rangeQuery(Rect);
-    uint size(map<string, double> &) const;
+    uint size(array<uint, 2> &) const;
     void snapshot() const;
 };
