@@ -67,7 +67,7 @@ double Node::minSqrDist(Rect r) const {
     return 0;
 }
 
-Node::Split *Node::getSplit(uint &writes) const {
+Node::Split Node::getSplit(uint &writes) const {
     bool axis;
     vector<Entry> allEntries = getEntries(writes);
     if (Split::type == Cyclic) {
@@ -93,9 +93,7 @@ Node::Split *Node::getSplit(uint &writes) const {
     }
     sort(all(allEntries),
          [axis](const Entry &l, const Entry &r) { return l.pt[axis] < r.pt[axis]; });
-    Split *split = new Split();
-    split->axis = axis;
-    split->pt = allEntries[allEntries.size() / 2].pt[axis];
+    Split split{.axis = axis, .pt = allEntries[allEntries.size() / 2].pt[axis]};
     return split;
 }
 
@@ -158,22 +156,20 @@ uint Directory::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
     return 0;
 }
 
-array<Node *, 2> Directory::partition(uint &writes, Split *split) {
+array<Node *, 2> Directory::partition(uint &writes, Split &split) {
     array<Node *, 2> dirs = {new Directory(), new Directory()};
-    if (split == NULL)
-        split = getSplit(writes);
     for (uint i = 0; i < dirs.size(); i++) {
         dirs[i]->rect = rect;
-        dirs[i]->rect[split->axis + !i * D] = split->pt;
-        dirs[i]->splitDim = split->axis;
+        dirs[i]->rect[split.axis + !i * D] = split.pt;
+        dirs[i]->splitDim = split.axis;
     }
 
     // Splitting contents
     while (!contents.empty()) {
         Node *cn = contents.front();
-        if (cn->rect[split->axis + D] <= split->pt)
+        if (cn->rect[split.axis + D] <= split.pt)
             static_cast<Directory *>(dirs[0])->contents.emplace_back(cn);
-        else if (cn->rect[split->axis] >= split->pt)
+        else if (cn->rect[split.axis] >= split.pt)
             static_cast<Directory *>(dirs[1])->contents.emplace_back(cn);
         else {
             array<Node *, 2> newNodes = cn->partition(writes, split);
@@ -185,6 +181,11 @@ array<Node *, 2> Directory::partition(uint &writes, Split *split) {
     }
 
     return dirs;
+}
+
+array<Node *, 2> Directory::partition(uint &writes) {
+    Split split = getSplit(writes);
+    return partition(writes, split);
 }
 
 uint Directory::range(uint &pointCount, Rect query) const {
@@ -302,23 +303,21 @@ uint Page::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
     return 1;
 }
 
-array<Node *, 2> Page::partition(uint &writes, Split *split) {
+array<Node *, 2> Page::partition(uint &writes, Split &split) {
     array<Node *, 2> pages = {new Page(), new Page()};
-    if (split == NULL)
-        split = getSplit(writes);
     for (uint i = 0; i < pages.size(); i++) {
         pages[i]->rect = rect;
-        pages[i]->rect[split->axis + !i * D] = split->pt;
-        pages[i]->splitDim = split->axis;
+        pages[i]->rect[split.axis + !i * D] = split.pt;
+        pages[i]->splitDim = split.axis;
     }
 
     // Splitting entries
     Page *firstPage = static_cast<Page *>(pages[0]);
     Page *secondPage = static_cast<Page *>(pages[1]);
     for (auto e : entries) {
-        if (e.pt[split->axis] < split->pt)
+        if (e.pt[split.axis] < split.pt)
             firstPage->entries.emplace_back(e);
-        else if (e.pt[split->axis] > split->pt)
+        else if (e.pt[split.axis] > split.pt)
             secondPage->entries.emplace_back(e);
         else {
             if (firstPage->entries.size() < secondPage->entries.size())
@@ -331,6 +330,11 @@ array<Node *, 2> Page::partition(uint &writes, Split *split) {
     entries.clear();
     writes += 2; // One write is already added in getSplit either in this call or before.
     return pages;
+}
+
+array<Node *, 2> Page::partition(uint &writes) {
+    Split split = getSplit(writes);
+    return partition(writes, split);
 }
 
 uint Page::range(uint &pointCount, Rect query) const {
