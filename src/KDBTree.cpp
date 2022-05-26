@@ -118,7 +118,10 @@ Info KDBTree::rangeQuery(Rect query) {
     return info;
 }
 
-uint KDBTree::size(array<uint, 2> &info) const { return root->size(info); }
+uint KDBTree::size(array<uint, 2> &info) const {
+    info = {0, 0};
+    return root->size(info);
+}
 
 void KDBTree::snapshot() const {
     string splitStr;

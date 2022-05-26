@@ -33,6 +33,7 @@ struct Node {
     bool overlap(Rect) const;
 
     virtual vector<Entry> getEntries(uint &) const = 0;
+    virtual uint getHeight() const = 0;
     Split getSplit(uint &) const;
     virtual uint insert(Node *, Entry) = 0;
     virtual uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnEntry> &) const = 0;
@@ -40,7 +41,7 @@ struct Node {
     virtual array<Node*, 2> partition(uint &) = 0;
     virtual uint range(uint &, Rect query) const = 0;
     virtual uint size(array<uint, 2> &) const = 0;
-    virtual uint snapshot(ofstream &) const = 0;
+    virtual void snapshot(ofstream &) const = 0;
 
     virtual ~Node() = 0;
 };
@@ -53,13 +54,14 @@ struct Directory: Node {
     explicit Directory(Node *, bool = true);
 
     vector<Entry> getEntries(uint &) const;
+    uint getHeight() const;
     uint insert(Node *, Entry);
     uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnEntry> &) const;
     array<Node*, 2> partition(uint &, Split &);
     array<Node*, 2> partition(uint &);
     uint range(uint &, Rect query) const;
     uint size(array<uint, 2> &) const;
-    uint snapshot(ofstream &) const;
+    void snapshot(ofstream &) const;
 
     ~Directory();
 };
@@ -73,13 +75,14 @@ struct Page: Node {
 
     Node* fission();
     vector<Entry> getEntries(uint &) const;
+    uint getHeight() const;
     uint insert(Node *, Entry);
     uint knnSearch(Rect, min_heap<knnNode> &, max_heap<knnEntry> &) const;
     array<Node*, 2> partition(uint &, Split &);
     array<Node*, 2> partition(uint &);
     uint range(uint &, Rect) const;
     uint size(array<uint, 2> &) const;
-    uint snapshot(ofstream &) const;
+    void snapshot(ofstream &) const;
 
     ~Page();
 };

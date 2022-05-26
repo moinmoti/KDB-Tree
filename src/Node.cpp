@@ -92,7 +92,7 @@ Node::Split Node::getSplit(uint &writes) const {
         abort();
     }
     sort(all(allEntries),
-         [axis](const Entry &l, const Entry &r) { return l.pt[axis] < r.pt[axis]; });
+        [axis](const Entry &l, const Entry &r) { return l.pt[axis] < r.pt[axis]; });
     Split split{.axis = axis, .pt = allEntries[allEntries.size() / 2].pt[axis]};
     return split;
 }
@@ -123,6 +123,8 @@ vector<Entry> Directory::getEntries(uint &writes) const {
     return allEntries;
 }
 
+uint Directory::getHeight() const { return contents.front()->getHeight() + 1; }
+
 uint Directory::insert(Node *pn, Entry e) {
     auto cn = contents.begin();
     while (!(*cn)->containsPt(e.pt))
@@ -142,7 +144,7 @@ uint Directory::insert(Node *pn, Entry e) {
 }
 
 uint Directory::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
-                          max_heap<knnEntry> &knnEnts) const {
+    max_heap<knnEntry> &knnEnts) const {
     double minDist = knnEnts.top().dist;
     for (auto cn : contents) {
         double dist = cn->minSqrDist(query);
@@ -205,15 +207,14 @@ uint Directory::size(array<uint, 2> &info) const {
     return totalSize;
 }
 
-uint Directory::snapshot(ofstream &ofs) const {
-    uint height = 0;
-    for (auto cn : contents)
-        height = cn->snapshot(ofs) + 1;
+void Directory::snapshot(ofstream &ofs) const {
+    uint height = getHeight();
     ofs << height << "," << contents.size();
     for (auto c : rect)
         ofs << "," << c;
     ofs << endl;
-    return height;
+    for (auto cn : contents)
+        cn->snapshot(ofs);
 }
 
 Directory::~Directory() {
@@ -269,6 +270,8 @@ vector<Entry> Page::getEntries(uint &writes) const {
     return entries;
 }
 
+uint Page::getHeight() const { return 0; }
+
 uint Page::insert(Node *pn, Entry e) {
     uint writes = 2;
     entries.emplace_back(e);
@@ -285,7 +288,7 @@ uint Page::insert(Node *pn, Entry e) {
 }
 
 uint Page::knnSearch(Rect query, min_heap<knnNode> &unseenNodes,
-                     max_heap<knnEntry> &knnEnts) const {
+    max_heap<knnEntry> &knnEnts) const {
     auto calcSqrDist = [](Rect x, Point y) {
         return pow((x[0] - y[0]), 2) + pow((x[1] - y[1]), 2);
     };
@@ -353,12 +356,11 @@ uint Page::size(array<uint, 2> &info) const {
     return 4 * sizeof(float) + sizeof(uint) + sizeof(void *);
 }
 
-uint Page::snapshot(ofstream &ofs) const {
+void Page::snapshot(ofstream &ofs) const {
     ofs << 0 << "," << entries.size();
     for (auto c : rect)
         ofs << "," << c;
     ofs << endl;
-    return 0;
 }
 
 Page::~Page() { entries.clear(); }
