@@ -19,21 +19,23 @@ fig = go.Figure()
 
 # Set axes properties
 fig.update_xaxes(
-    range=[-200, 200],
+    range=[-182, 182],
     showgrid=False,
     zeroline=False,
     mirror=True,
-    ticks="outside",
-    showline=True,
+    # ticks="outside",
+    showticklabels=False,
+    showline=False,
     linecolor="black",
 )
 fig.update_yaxes(
-    range=[-100, 100],
+    range=[-91, 91],
     showgrid=False,
     zeroline=False,
     mirror=True,
-    ticks="outside",
-    showline=True,
+    # ticks="outside",
+    showticklabels=False,
+    showline=False,
     linecolor="black",
 )
 
@@ -46,7 +48,7 @@ for n in nodes:
             mode="lines",
             x=[n[0], n[0], n[2], n[2], n[0]],
             y=[n[1], n[3], n[3], n[1], n[1]],
-            line=dict(color="black", width=0.25),
+            line=dict(color="black", width=0.75),
         )
     )
     perimeter += 2 * ((n[2] - n[0]) + (n[3] - n[1]))
@@ -82,13 +84,9 @@ print(
     )
 ) """
 
-# fig.update_shapes(dict(xref='x', yref='y', line=dict(color="black")))
 fig.update_layout(
     showlegend=False,
-    # title="Tolerance map at height=0 for 1:1 read-write workload",
-    xaxis_title="Longitude",
-    yaxis_title="Latitude",
-    font_size=6,
     plot_bgcolor="white",
+    margin=dict(l=0, r=0, t=0, b=0),
 )
-fig.write_image(file="Snapshots/KDBTree.pdf")
+fig.write_image(file="Snapshots/KDBTree.png")
