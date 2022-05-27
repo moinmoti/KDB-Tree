@@ -5,15 +5,15 @@ KDBTree
 
 # Other
 Experiments
+Queries
 Snapshots
-Data
+.clangd
 *._*
 *DS_Store*
-*.dat
-*.idx
 *.csv
 *.png
 *.err
 *.json
 .python-version
+dataFile.txt
 Index
