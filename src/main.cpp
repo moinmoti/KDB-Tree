@@ -160,12 +160,8 @@ int main(int argCount, char **args) {
 
     string expPath = projectPath + "/Experiments/";
     string prefix = expPath + queryType + "/";
-    string queryFile = projectPath + "/Data/AIS/Queries/" + queryType + ".txt";
-    // string dataFile = projectPath + "/Data/AIS/ships1e8.txt";
-    /* string queryFile = projectPath + "/Data/OSM/Queries/" + queryType + ".txt";
-    string dataFile = projectPath + "/Data/OSM/data-7e7.txt"; */
-    // vector<int> fanout = {5, 10, 15, 20, 25, 50, 100, 150, 200};
-    array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
+    string queryFile = projectPath + "/Queries/" + queryType + ".txt";
+    string dataFile = projectPath + "/dataFile.txt";
 
     cout << "---Generation--- " << endl;
 
