@@ -156,9 +156,6 @@ int main(int argCount, char **args) {
     string queryType = string(args[2]);
     int fanout = stoi(string(args[3]));
     int pageCap = stoi(string(args[4]));
-    // long limit = 1e8;
-    /* string sign = "-I1e" + to_string(int(log10(insertions))) + "-" +
-       to_string(fanout) + "-" + to_string(pageCap); */
     string sign = "-" + to_string(fanout);
 
     string expPath = projectPath + "/Experiments/";
@@ -176,25 +173,21 @@ int main(int argCount, char **args) {
     ofstream log(logFile);
     if (!log.is_open())
         cout << "Unable to open log.txt";
-    // high_resolution_clock::time_point start = high_resolution_clock::now();
     cout << "Defining KDBTree..." << endl;
+    array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
     KDBTree index = KDBTree(pageCap, fanout, boundary, Spread);
-    /* cout << "Bulkloading KDBTree..." << endl;
-    index.bulkload(dataFile, limit); */
-    /* double hTreeCreationTime =
-        duration_cast<microseconds>(high_resolution_clock::now() - start).count();
-    log << "KDBTree Creation Time: " << hTreeCreationTime << endl; */
+    if constexpr (BULKLOAD) {
+        cout << "Bulkloading KDBTree..." << endl;
+        index.bulkload(dataFile, 1e7);
+    }
     log << "Directory Capacity: " << fanout << endl;
     log << "Page Capacity: " << pageCap << endl;
-    /* map<string, double> stats;
-    float indexSize = index.size(stats);
-    log << "KDBTree size in MB: " << float(indexSize / 1e6) << endl;
-    // index.snapshot();
-    log << "No. of pages: " << stats["pages"] << endl;
-    log << "No. of directories: " << stats["directories"] << endl; */
 
-    cout << "---Evaluation--- " << endl;
-    evaluate(&index, queryFile, logFile);
-    // index.snapshot();
+    if constexpr (EVAL) {
+        cout << "---Evaluation--- " << endl;
+        evaluate(&index, queryFile, logFile);
+    }
+    if constexpr (SNAPSHOT)
+        index.snapshot();
     return 0;
 }
