@@ -1,9 +1,12 @@
+import sys
 import plotly.graph_objects as go
+
+fileName = sys.argv[1]
 
 height = 0
 nodes = []
 tolerance = []
-with open("Snapshots/KDBTree.csv") as f:
+with open("Index.csv") as f:
     for i, line in enumerate(f):
         if int(line.split(",")[0]) == height:
             nodes.append(
@@ -60,30 +63,6 @@ print(
     f"Total Number of Nodes: {numNodes}\nAverage Perimeter: {avgLen:.2f}\nAverage Cardinality: {avgCardinality:.2f}"
 )
 
-""" fig.add_trace(
-    go.Scatter(
-        x=[None],
-        y=[None],
-        mode="markers",
-        marker=dict(
-            cmin=0,
-            cmax=1,
-            colorscale=[[0, "rgba(255,143,0,0)"], [1, "rgba(255,143,0,1)"]],
-            showscale=True,
-            colorbar=dict(
-                title="Node tolerance",
-                tickvals=[0, meanTol, 1],
-                ticktext=[
-                    str(minTol) + " (Min)",
-                    str(meanTol) + " (Mean)",
-                    str(maxTol) + " (Max)",
-                ],
-                ticks="outside",
-            ),
-        ),
-    )
-) """
-
 fig.update_layout(
     showlegend=False,
     plot_bgcolor="white",
@@ -91,4 +70,4 @@ fig.update_layout(
     height=720,
     width=1440,
 )
-fig.write_image(file="Snapshots/KDBTree.png")
+fig.write_image(file="Index.png")

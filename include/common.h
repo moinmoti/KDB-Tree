@@ -39,6 +39,7 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 #define all(c) c.begin(), c.end()
 #define remove(container, element) container.erase(find(all(container), element))
 
+constexpr unsigned int D = 2;
 using Rect = array<float, 2*D>;
 using Point = array<float, D>;
 template<typename T> using max_heap = priority_queue<T, vector<T>>;

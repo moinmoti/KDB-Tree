@@ -9,7 +9,7 @@ Index
 *.err
 *.json
 *.txt
-*.sh
+*run.sh
 .python-version
 
 # Other

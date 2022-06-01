@@ -97,7 +97,7 @@ Info KDBTree::kNNQuery(Point p, uint k) {
             break;
     }
 
-    if constexpr (LOG) {
+    if constexpr (DEBUG) {
         double sqrDist;
         if (k == 32) {
             while (!knnEnts.empty()) {
@@ -115,7 +115,7 @@ Info KDBTree::kNNQuery(Point p, uint k) {
 Info KDBTree::rangeQuery(Rect query) {
     Info info;
     info.cost = root->range(info.output, query);
-    if constexpr (LOG) {
+    if constexpr (DEBUG) {
         uint pointCount = info.output;
         trace(pointCount);
     }
@@ -128,18 +128,7 @@ uint KDBTree::size(array<uint, 2> &info) const {
 }
 
 void KDBTree::snapshot() const {
-    string splitStr;
-    SplitType usedType = Node::Split::type;
-    if (usedType == Cyclic)
-        splitStr = "Cyclic";
-    else if (usedType == Orientation)
-        splitStr = "Orientation";
-    else if (usedType == Spread)
-        splitStr = "Spread";
-    else
-        splitStr = "Invalid";
-
-    ofstream ofs(splitStr + "-KDBTree.csv");
+    ofstream ofs("Index.csv");
     root->snapshot(ofs);
     ofs.close();
 }

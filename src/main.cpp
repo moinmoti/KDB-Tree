@@ -53,14 +53,14 @@ void rangeQuery(tuple<char, vector<float>, float> q, KDBTree *index, Stats &stat
     stats.range[rs].count++;
 }
 
-void evaluate(KDBTree *index, string queryFile, string logFile) {
+void evaluate(KDBTree *index, string opFile, string logFile) {
     Stats stats;
     bool canQuery = false;
     auto roundit = [](float val, int d = 2) { return round(val * pow(10, d)) / pow(10, d); };
 
-    cout << "Begin Querying " << queryFile << endl;
+    cout << "Begin Querying " << opFile << endl;
     string line;
-    ifstream file(queryFile);
+    ifstream file(opFile);
     if (file.is_open()) {
         // getline(file, line); // Skip the header line
         while (getline(file, line)) {
@@ -144,8 +144,22 @@ void evaluate(KDBTree *index, string queryFile, string logFile) {
 }
 
 int main(int argCount, char **args) {
-    string dataFile = string(args[1]);
-    string queryFile = string(args[2]);
+    string dataFile, opFile;
+    if constexpr (BULKLOAD) {
+        if (argCount != 3) {
+            cerr << "Error: Incorrect usage, please refer to the README" << endl;
+            return 0;
+        }
+        dataFile = string(args[1]);
+        opFile = string(args[2]);
+    } else {
+        if (argCount != 2) {
+            cerr << "Error: Incorrect usage, please refer to the README" << endl;
+            return 0;
+        }
+        opFile = string(args[1]);
+    }
+
     string logFile = "log.txt";
     ofstream log(logFile);
     if (!log.is_open())
@@ -162,7 +176,7 @@ int main(int argCount, char **args) {
 
     if constexpr (EVAL) {
         cout << "---Evaluation--- " << endl;
-        evaluate(&index, queryFile, logFile);
+        evaluate(&index, opFile, logFile);
     }
     if constexpr (SNAPSHOT)
         index.snapshot();
