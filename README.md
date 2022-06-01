@@ -43,6 +43,7 @@ constexpr bool SNAPSHOT = false; // Set it to true for creating a snapshot of th
 
 constexpr unsigned int FANOUT = 204; // Set the fanout here.
 constexpr unsigned int PAGECAP = 204; // Set the page capacity here.
+constexpr unsigned long BLL = 1e7; // Short for bulk loading limit.
 ```
 
 ## Usage

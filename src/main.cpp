@@ -168,7 +168,7 @@ int main(int argCount, char **args) {
     KDBTree index = KDBTree(FANOUT, PAGECAP, boundary, SplitType::Spread);
     if constexpr (BULKLOAD) {
         cout << "Bulkloading KDBTree..." << endl;
-        index.bulkload(dataFile, 1e7);
+        index.bulkload(dataFile, BLL);
     }
     log << "Directory Capacity: " << FANOUT << endl;
     log << "Page Capacity: " << PAGECAP << endl;
