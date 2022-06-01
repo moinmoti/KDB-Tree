@@ -1,7 +1,16 @@
-# CMake Entries
+# Build Files
 build
 compile_commands.json
-KDBTree
+Index
+
+# Extensions
+*.csv
+*.png
+*.err
+*.json
+*.txt
+*.sh
+.python-version
 
 # Other
 Experiments
@@ -10,10 +19,3 @@ Snapshots
 .clangd
 *._*
 *DS_Store*
-*.csv
-*.png
-*.err
-*.json
-.python-version
-dataFile.txt
-Index

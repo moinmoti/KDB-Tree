@@ -4,7 +4,7 @@ void printRect(string str, Rect r) {
     cerr << str << ": " << r[0] << " | " << r[1] << " | " << r[2] << " | " << r[3] << endl;
 }
 
-KDBTree::KDBTree(uint _pageCap, uint _fanout, Rect _boundary, SplitType _splitType) {
+KDBTree::KDBTree(uint _fanout, uint _pageCap, Rect _boundary, SplitType _splitType) {
     Directory::capacity = _fanout;
     Page::capacity = _pageCap;
     Node::Split::type = _splitType;

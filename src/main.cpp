@@ -4,7 +4,6 @@ struct Stats {
     struct StatType {
         long count = 0;
         long io = 0;
-        // long time = 0;
     };
 
     StatType del;
@@ -109,7 +108,6 @@ void evaluate(KDBTree *index, string queryFile, string logFile) {
                 for (auto &l : stats.range) {
                     log << setw(8) << l.first << setw(8) << l.second.count << setw(8)
                         << roundit(l.second.io / double(l.second.count)) << endl;
-                    // << roundit(l.second.time / double(l.second.count)) << endl;
                 }
 
                 log << endl << "------------------KNN Queries-------------------" << endl;
@@ -118,14 +116,11 @@ void evaluate(KDBTree *index, string queryFile, string logFile) {
                 for (auto &l : stats.knn) {
                     log << setw(8) << l.first << setw(8) << l.second.count << setw(8)
                         << roundit(l.second.io / double(l.second.count)) << endl;
-                    // << roundit(l.second.time / double(l.second.count)) << endl;
                 }
 
                 log << endl << "------------------Insert Queries-------------------" << endl;
                 log << "Count:\t" << stats.insert.count << endl;
                 log << "I/O:\t" << stats.insert.io / double(stats.insert.count) << endl;
-                // log << "Time: \t" << stats.insert.time / double(stats.insert.count) << endl <<
-                // endl;
 
                 log << endl << "------------------ Reloading -------------------" << endl;
                 log << "Count:\t" << stats.reload.count << endl;
@@ -142,42 +137,28 @@ void evaluate(KDBTree *index, string queryFile, string logFile) {
                 log.close();
             } else
                 cerr << "Invalid Query!!!" << endl;
-            // cerr << endl;
         }
         file.close();
     }
     cout << "Finish Querying..." << endl;
 }
 
-// main with arguments to be called by python wrapper
 int main(int argCount, char **args) {
-    map<string, string> config;
-    string projectPath = string(args[1]);
-    string queryType = string(args[2]);
-    int fanout = stoi(string(args[3]));
-    int pageCap = stoi(string(args[4]));
-    string sign = "-" + to_string(fanout);
-
-    string expPath = projectPath + "/Experiments/";
-    string prefix = expPath + queryType + "/";
-    string queryFile = projectPath + "/Queries/" + queryType + ".txt";
-    string dataFile = projectPath + "/dataFile.txt";
-
-    cout << "---Generation--- " << endl;
-
-    string logFile = prefix + "log" + sign + ".txt";
+    string dataFile = string(args[1]);
+    string queryFile = string(args[2]);
+    string logFile = "log.txt";
     ofstream log(logFile);
     if (!log.is_open())
         cout << "Unable to open log.txt";
     cout << "Defining KDBTree..." << endl;
     array<float, 4> boundary{-180.0, -90.0, 180.0, 90.0};
-    KDBTree index = KDBTree(pageCap, fanout, boundary, Spread);
+    KDBTree index = KDBTree(FANOUT, PAGECAP, boundary, SplitType::Spread);
     if constexpr (BULKLOAD) {
         cout << "Bulkloading KDBTree..." << endl;
         index.bulkload(dataFile, 1e7);
     }
-    log << "Directory Capacity: " << fanout << endl;
-    log << "Page Capacity: " << pageCap << endl;
+    log << "Directory Capacity: " << FANOUT << endl;
+    log << "Page Capacity: " << PAGECAP << endl;
 
     if constexpr (EVAL) {
         cout << "---Evaluation--- " << endl;
