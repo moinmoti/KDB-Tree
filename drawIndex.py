@@ -88,5 +88,7 @@ fig.update_layout(
     showlegend=False,
     plot_bgcolor="white",
     margin=dict(l=0, r=0, t=0, b=0),
+    height=720,
+    width=1440,
 )
 fig.write_image(file="Snapshots/KDBTree.png")

@@ -38,7 +38,7 @@ void __f(const char *names, Arg1 &&arg1, Args &&... args) {
 #define remove(container, element) container.erase(find(all(container), element))
 
 constexpr bool BULKLOAD = true;
-constexpr bool EVAL = true;
+constexpr bool EVAL = false;
 constexpr bool LOG = false;
 constexpr bool SNAPSHOT = true;
 
