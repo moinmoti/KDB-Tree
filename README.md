@@ -84,7 +84,7 @@ k <x-axis coordinate> <y-axis coordinate> <k>
 ```
 r <lower x-axis coordinate> <lower y-axis coordinate> <higher x-axis coordinate> <higher y-axis coordinate> <size>
 ```
-- Log (l): Requires no additional information. Used to initiate the performance measurements.
+- Log (l): Requires no additional information. Used to output the performance measurements.
 ```
 l
 ```
@@ -109,9 +109,12 @@ The script may require the [Plotly](https://plotly.com/python/getting-started/) 
 
 ### Examples
 
-The following example scripts setup the build directory, compile the program and execute the code for static and dynamic data sets respectively.
-- Execute `staticExample.sh` to bulk load `sampleData.txt` to the index and operate `sampleOperations.txt` on it. Make sure to enable `BULKLOAD` in the config file before executing this script.
-- Execute `dynamicExample.sh` to operate `sampleOperations.txt` on the index. Make sure to disable `BULKLOAD` in the config file before executing this script.
+The `example.sh` setups the build directory, compiles the program and executes the program for the sample files in the Example directory.
+```
+chmod u+x example.sh
+./example.sh
+```
+Make sure to enable `BULKLOAD` in the config file before executing this script.
 
 ## Remarks
 
