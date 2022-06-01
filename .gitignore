@@ -8,7 +8,6 @@ Index
 *.png
 *.err
 *.json
-*.txt
 *run.sh
 .python-version
 
@@ -19,3 +18,5 @@ Snapshots
 .clangd
 *._*
 *DS_Store*
+dataFile.txt
+log.txt

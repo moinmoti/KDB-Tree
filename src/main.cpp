@@ -104,15 +104,14 @@ void evaluate(KDBTree *index, string opFile, string logFile) {
 
                 log << "------------------Range Queries-------------------" << endl;
                 log << setw(8) << "Size" << setw(8) << "Count" << setw(8) << "I/O" << setw(8)
-                    << "Time" << endl;
+                    << endl;
                 for (auto &l : stats.range) {
                     log << setw(8) << l.first << setw(8) << l.second.count << setw(8)
                         << roundit(l.second.io / double(l.second.count)) << endl;
                 }
 
                 log << endl << "------------------KNN Queries-------------------" << endl;
-                log << setw(8) << "k" << setw(8) << "Count" << setw(8) << "I/O" << setw(8) << "Time"
-                    << endl;
+                log << setw(8) << "k" << setw(8) << "Count" << setw(8) << "I/O" << setw(8) << endl;
                 for (auto &l : stats.knn) {
                     log << setw(8) << l.first << setw(8) << l.second.count << setw(8)
                         << roundit(l.second.io / double(l.second.count)) << endl;

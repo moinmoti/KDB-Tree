@@ -1,7 +1,4 @@
-import sys
 import plotly.graph_objects as go
-
-fileName = sys.argv[1]
 
 height = 0
 nodes = []
@@ -58,10 +55,7 @@ for n in nodes:
 
 numNodes = len(nodes)
 avgLen = perimeter / numNodes
-avgCardinality = 1e7 / numNodes
-print(
-    f"Total Number of Nodes: {numNodes}\nAverage Perimeter: {avgLen:.2f}\nAverage Cardinality: {avgCardinality:.2f}"
-)
+print(f"Total Number of Nodes: {numNodes}\nAverage Perimeter: {avgLen:.2f}")
 
 fig.update_layout(
     showlegend=False,
