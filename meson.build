@@ -4,6 +4,8 @@ incdir = include_directories('include')
 src = [
   'src/main.cpp',
   'src/Node.cpp',
+  'src/Page.cpp',
+  'src/Directory.cpp',
   'src/KDBTree.cpp',
 ]
 

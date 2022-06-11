@@ -98,11 +98,10 @@ Info KDBTree::kNNQuery(Point p, uint k) {
     }
 
     if constexpr (DEBUG) {
-        double sqrDist;
         if (k == 32) {
             while (!knnEnts.empty()) {
                 Entry entry = knnEnts.top().entry;
-                sqrDist = knnEnts.top().dist;
+                double sqrDist = knnEnts.top().dist;
                 knnEnts.pop();
                 trace(entry.id, sqrDist);
             }
@@ -116,8 +115,9 @@ Info KDBTree::rangeQuery(Rect query) {
     Info info;
     info.cost = root->range(info.output, query);
     if constexpr (DEBUG) {
-        uint pointCount = info.output;
-        trace(pointCount);
+        uint numEntries = info.output;
+        trace(numEntries);
+        cerr << endl;
     }
     return info;
 }
